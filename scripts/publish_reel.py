@@ -28,6 +28,7 @@ import sys
 import time
 import urllib.request
 import urllib.error
+import urllib.parse
 
 BACKEND_URL = os.environ["BACKEND_URL"].rstrip("/")
 CRON_SECRET = os.environ["CRON_SECRET"]
@@ -134,6 +135,60 @@ def download(url: str, dest: str) -> None:
         f.write(raw)
 
 
+def instagram_publish_reel(creds: dict, video_url: str, caption: str) -> tuple[str, str, str]:
+    """Publish a Reel via the Instagram Graph API. Runs here (no time limit).
+
+    Returns (status, media_id, message). Credentials are used in memory only.
+    """
+    if creds.get("mock_mode"):
+        return "PUBLISHED", "mock-media-id", "Mock publish."
+    if creds.get("dry_run"):
+        return "DRY_RUN", "", "Dry run: no publish attempted."
+
+    user_id = creds.get("user_id", "")
+    token = creds.get("access_token", "")
+    ver = creds.get("api_version", "v24.0")
+    if not (user_id and token):
+        return "NOT_CONFIGURED", "", "Instagram user id / token not configured."
+
+    base = f"https://graph.facebook.com/{ver}"
+
+    # 1. Create the REELS container
+    body = urllib.parse.urlencode({
+        "media_type": "REELS", "video_url": video_url,
+        "caption": caption, "access_token": token,
+    }).encode()
+    status, raw = _http("POST", f"{base}/{user_id}/media",
+                        headers={"Content-Type": "application/x-www-form-urlencoded"},
+                        data=body, timeout=60)
+    if status != 200:
+        return "ERROR", "", f"container create failed: {raw[:300]!r}"
+    container_id = json.loads(raw)["id"]
+
+    # 2. Poll until the container finishes processing (worker has no time limit)
+    for _ in range(30):  # up to ~5 min
+        time.sleep(10)
+        s2, r2 = _http("GET", f"{base}/{container_id}?fields=status_code&access_token={token}", timeout=30)
+        if s2 != 200:
+            return "ERROR", "", f"status poll failed: {r2[:200]!r}"
+        code = json.loads(r2).get("status_code")
+        if code == "FINISHED":
+            break
+        if code in ("ERROR", "EXPIRED"):
+            return code, "", f"container processing {code}"
+    else:
+        return "IN_PROGRESS", "", "Container did not finish in time."
+
+    # 3. Publish
+    pub_body = urllib.parse.urlencode({"creation_id": container_id, "access_token": token}).encode()
+    s3, r3 = _http("POST", f"{base}/{user_id}/media_publish",
+                   headers={"Content-Type": "application/x-www-form-urlencoded"},
+                   data=pub_body, timeout=60)
+    if s3 != 200:
+        return "ERROR", "", f"publish failed: {r3[:300]!r}"
+    return "PUBLISHED", json.loads(r3).get("id", ""), "Published."
+
+
 def render_video(cover_path: str, out_path: str, duration: int = 30, fps: int = 30) -> None:
     cmd = [
         "ffmpeg", "-y",
@@ -185,13 +240,28 @@ def main() -> int:
     # 5. Prune to newest KEEP_ASSETS
     prune_assets(release_id, KEEP_ASSETS)
 
-    # 6. Tell backend to publish
-    status, pub = backend_post("/api/cron/publish", {"reel_id": reel_id, "video_url": video_url})
-    print(f"Publish response: {status} {pub}")
-    if status == 200 and pub.get("status") in ("PUBLISHED", "DRY_RUN", "CONTAINER_READY", "ALREADY_PUBLISHED"):
+    # 6. Fetch IG credentials (in memory only) and publish from here — the
+    # runner has no time limit, unlike Vercel's 10s functions.
+    status, creds = backend_post("/api/cron/ig-credentials", None)
+    if status != 200:
+        print(f"ig-credentials failed: {status} {creds}")
+        return 1
+
+    caption = reel.get("caption", "")
+    print("Publishing to Instagram (from runner)...")
+    ig_status, media_id, msg = instagram_publish_reel(creds, video_url, caption)
+    print(f"IG result: status={ig_status} media_id={media_id} msg={msg}")
+
+    # 7. Report outcome back to the backend (updates DB, marks job POSTED)
+    backend_post("/api/cron/mark-published", {
+        "reel_id": reel_id, "video_url": video_url,
+        "media_id": media_id, "status": ig_status, "error": msg,
+    })
+
+    if ig_status in ("PUBLISHED", "DRY_RUN", "CONTAINER_READY"):
         print("Done — reel published.")
         return 0
-    print("Publish did not succeed.")
+    print(f"Publish did not succeed: {msg}")
     return 1
 
 
