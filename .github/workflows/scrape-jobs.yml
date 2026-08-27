@@ -1,0 +1,30 @@
+name: Scrape Jobs
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'    # every 12 hours (UTC)
+  workflow_dispatch:            # manual "Run workflow" button
+
+concurrency:
+  group: scrape-jobs
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout worker
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Scrape top-200 companies (batched, India freshers)
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          TOP_N: '200'
+          BATCH_SIZE: '5'
+        run: python scripts/scrape_jobs.py

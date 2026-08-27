@@ -2,7 +2,7 @@ name: Publish Reel
 
 on:
   schedule:
-    - cron: '0 * * * *'      # every hour, on the hour (UTC)
+    - cron: '*/30 * * * *'   # every 30 minutes (UTC)
   workflow_dispatch:          # manual "Run workflow" button
 
 concurrency:
