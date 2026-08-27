@@ -49,8 +49,12 @@ RELEASE_TAG = os.getenv("RELEASE_TAG", "reel-media")
 KEEP_ASSETS = int(os.getenv("KEEP_ASSETS", "5"))
 INTRO_SECONDS = float(os.getenv("INTRO_SECONDS", "3"))
 REEL_SECONDS = float(os.getenv("REEL_SECONDS", "30"))
-POLL_MAX = int(os.getenv("POLL_MAX", "30"))
-POLL_INTERVAL = float(os.getenv("POLL_INTERVAL", "10"))
+# Keep Instagram API calls low: wait a bit before the first check (containers
+# rarely finish instantly), then poll a modest number of times. ~12 checks x 8s
+# ≈ up to ~100s, plenty for a short still-image reel, without hammering the API.
+POLL_MAX = int(os.getenv("POLL_MAX", "12"))
+POLL_INTERVAL = float(os.getenv("POLL_INTERVAL", "8"))
+POLL_FIRST_DELAY = float(os.getenv("POLL_FIRST_DELAY", "15"))
 
 GH_API = "https://api.github.com"
 
@@ -204,18 +208,23 @@ def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "") -> tu
     print(f"  container created: {container_id}")
 
     # 2. Poll status until FINISHED (retries live here on the runner).
+    #    Wait once up-front so the container has time to process — this avoids a
+    #    burst of early "IN_PROGRESS" checks and keeps total IG calls low.
+    time.sleep(POLL_FIRST_DELAY)
     for attempt in range(POLL_MAX):
-        time.sleep(POLL_INTERVAL)
         st, data = backend_post("/api/cron/ig/container-status", {"container_id": container_id})
-        if st != 200:
+        if st == 200:
+            code = data.get("status_code", "UNKNOWN")
+            print(f"  container status: {code} (attempt {attempt+1})")
+            if code == "FINISHED":
+                break
+            if code in ("ERROR", "EXPIRED"):
+                return code, "", f"container processing {code}"
+        else:
             print(f"  status check HTTP {st} (attempt {attempt+1}); retrying")
-            continue
-        code = data.get("status_code", "UNKNOWN")
-        print(f"  container status: {code} (attempt {attempt+1})")
-        if code == "FINISHED":
-            break
-        if code in ("ERROR", "EXPIRED"):
-            return code, "", f"container processing {code}"
+        # Wait between checks (skip the wait after the final attempt).
+        if attempt < POLL_MAX - 1:
+            time.sleep(POLL_INTERVAL)
     else:
         return "IN_PROGRESS", "", "Container did not finish within polling window."
 
