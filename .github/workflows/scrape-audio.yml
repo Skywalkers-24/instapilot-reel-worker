@@ -1,0 +1,28 @@
+name: Scrape Trending Audio
+
+on:
+  schedule:
+    - cron: '30 2 * * *'    # daily at 02:30 UTC (list updates daily)
+  workflow_dispatch:          # manual "Run workflow" button
+
+concurrency:
+  group: scrape-audio
+  cancel-in-progress: false
+
+jobs:
+  scrape-audio:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout worker
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Scrape trending audio → backend
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: python scripts/scrape_trending_audio.py
