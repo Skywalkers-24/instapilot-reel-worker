@@ -21,10 +21,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Scrape top-200 companies (batched, India freshers)
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip httpx
+
+      - name: Scrape top-200 companies on the runner (India freshers)
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           TOP_N: '200'
-          BATCH_SIZE: '5'
+          MAX_JOBS_PER_COMPANY: '3'
+          INGEST_BATCH: '40'
         run: python scripts/scrape_jobs.py

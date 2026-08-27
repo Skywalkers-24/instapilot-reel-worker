@@ -1,71 +1,142 @@
 #!/usr/bin/env python3
 """
-Job scraper trigger (runs in GitHub Actions, no secrets except CRON_SECRET).
+Job scraper — runs ON THE GITHUB RUNNER (heavy work, no time limit).
 
-Calls the backend's POST /api/cron/scrape-jobs repeatedly — one batch of 5
-companies per call — until the backend reports has_more=false. The backend
-does the actual scraping + DB writes server-side (DATABASE_URL never touches
-the runner). Top-200 companies, India fresher roles, real job IDs.
+Unlike the old version (which asked the backend to scrape, hitting Vercel's
+~10s function limit), this does ALL the ATS scraping here on the runner and
+only sends clean rows to the backend to persist. The backend never makes slow
+outbound scraping calls.
+
+Flow:
+  1. GET  {BACKEND_URL}/api/cron/companies?top_n=N   -> ranked companies + ATS URLs
+  2. For each company: scrape its ATS on the runner (providers.py) and filter
+     to India + fresher-target engineering roles (filters.py)
+  3. POST {BACKEND_URL}/api/cron/ingest-jobs in batches -> backend scores,
+     dedups, writes, and (on the final batch) prunes to the 500-job cap
+
+No DB credentials ever touch the runner — only CRON_SECRET + BACKEND_URL.
 
 Env:
-  BACKEND_URL   base URL of the backend (required)
-  CRON_SECRET   shared secret (matches backend CRON_SECRET)
-  TOP_N         company universe size (default 200)
-  BATCH_SIZE    companies per batch (default 5)
-  MAX_RETRIES   retries per batch on transient failure (default 2)
+  BACKEND_URL         base URL of the backend (required)
+  CRON_SECRET         shared secret (matches backend CRON_SECRET)
+  TOP_N               company universe size (default 200)
+  MAX_JOBS_PER_COMPANY per-company cap sent to backend (default 3)
+  INGEST_BATCH        rows per ingest POST (default 40)
+  HTTP_TIMEOUT        per-request timeout seconds (default 20)
 """
 from __future__ import annotations
 
 import json
 import os
 import sys
-import time
-import urllib.request
 import urllib.error
+import urllib.request
+
+import httpx
+
+# scrape_jobs.py runs as `python scripts/scrape_jobs.py`, so `scripts/` is on
+# sys.path[0] and these sibling modules import directly.
+from filters import india_ok, is_target_fresher_title
+from providers import USER_AGENT, provider_for
 
 BACKEND_URL = os.environ["BACKEND_URL"].rstrip("/")
 CRON_SECRET = os.environ["CRON_SECRET"]
 TOP_N = int(os.getenv("TOP_N", "200"))
-BATCH_SIZE = int(os.getenv("BATCH_SIZE", "5"))
-MAX_RETRIES = int(os.getenv("MAX_RETRIES", "2"))
-MAX_BATCHES = (TOP_N + BATCH_SIZE - 1) // BATCH_SIZE
+MAX_JOBS_PER_COMPANY = int(os.getenv("MAX_JOBS_PER_COMPANY", "3"))
+INGEST_BATCH = int(os.getenv("INGEST_BATCH", "40"))
+HTTP_TIMEOUT = float(os.getenv("HTTP_TIMEOUT", "20"))
 
 
-def post(path: str, payload: dict):
-    data = json.dumps(payload).encode()
+def _backend(method: str, path: str, payload: dict | None = None):
+    data = json.dumps(payload).encode() if payload is not None else None
     req = urllib.request.Request(
-        f"{BACKEND_URL}{path}", method="POST", data=data,
+        f"{BACKEND_URL}{path}", method=method, data=data,
         headers={"Content-Type": "application/json", "X-Cron-Secret": CRON_SECRET},
     )
     try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=60) as resp:
             return resp.status, json.loads(resp.read() or b"{}")
     except urllib.error.HTTPError as e:
         return e.code, {"error": e.read().decode(errors="replace")[:300]}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return 0, {"error": str(e)[:300]}
 
 
-def post_with_retry(path: str, payload: dict):
-    """POST a batch, retrying transient failures with exponential backoff.
+def fetch_companies() -> list[dict]:
+    status, data = _backend("GET", f"/api/cron/companies?top_n={TOP_N}")
+    if status != 200:
+        print(f"companies fetch failed: HTTP {status} {data}")
+        return []
+    return data.get("companies", [])
 
-    Returns (status, data, attempts). A non-200 status after all retries is
-    surfaced to the caller so the run can be marked degraded.
-    """
-    status, data = 0, {}
-    for attempt in range(1, MAX_RETRIES + 2):  # 1 initial try + MAX_RETRIES
-        status, data = post(path, payload)
-        if status == 200:
-            return status, data, attempt
-        if attempt <= MAX_RETRIES:
-            backoff = 5 * attempt
-            print(f"    retry {attempt}/{MAX_RETRIES} after HTTP {status} (waiting {backoff}s)")
-            time.sleep(backoff)
-    return status, data, MAX_RETRIES + 1
+
+def _iso(value) -> str | None:
+    if not value:
+        return None
+    try:
+        return value.isoformat()
+    except AttributeError:
+        return str(value)
+
+
+def scrape_company(client: httpx.Client, company: dict) -> list[dict]:
+    """Scrape one company's ATS sources on the runner; return clean India+fresher rows."""
+    name = str(company.get("name") or "")
+    website = str(company.get("website") or "")
+    rows: list[dict] = []
+    per_company = 0
+    for source_url in (company.get("source_urls") or [])[:2]:
+        if per_company >= MAX_JOBS_PER_COMPANY:
+            break
+        try:
+            provider = provider_for(source_url, client)
+            candidates = provider.collect(source_url)
+        except Exception as exc:  # noqa: BLE001 — one bad source shouldn't kill the company
+            print(f"  ! {name}: {source_url} -> {str(exc)[:120]}")
+            continue
+        for cand in candidates:
+            if per_company >= MAX_JOBS_PER_COMPANY:
+                break
+            if not is_target_fresher_title(cand.title):
+                continue
+            if not india_ok(cand.location, cand.country):
+                continue
+            external_id = str(cand.external_id or "").strip()
+            apply_url = cand.canonical_url or cand.apply_url
+            if not (external_id and apply_url):
+                continue
+            rows.append({
+                "company": name,
+                "website": website,
+                "source_url": source_url,
+                "external_id": external_id,
+                "title": cand.title,
+                "location": cand.location,
+                "country": cand.country,
+                "department": cand.department,
+                "workplace_type": cand.workplace_type,
+                "employment_type": cand.employment_type,
+                "salary_text": cand.salary_text,
+                "apply_url": apply_url,
+                "canonical_url": cand.canonical_url or apply_url,
+                "description": (cand.description or "")[:8000],
+                "posted_at": _iso(cand.posted_at),
+                "expires_at": _iso(cand.expires_at),
+            })
+            per_company += 1
+    return rows
+
+
+def flush(batch: list[dict], is_last: bool) -> dict:
+    status, data = _backend("POST", "/api/cron/ingest-jobs", {"jobs": batch, "is_last_batch": is_last})
+    if status != 200:
+        print(f"  ingest failed: HTTP {status} {data}")
+        return {"saved": 0, "skipped": 0}
+    print(f"  ingested batch of {len(batch)}: saved={data.get('saved')} skipped={data.get('skipped')} pruned={data.get('pruned_jobs', 0)}")
+    return data
 
 
 def write_step_summary(lines: list[str]) -> None:
-    """Append a Markdown summary to the GitHub Actions run (no-op locally)."""
     path = os.getenv("GITHUB_STEP_SUMMARY")
     if not path:
         return
@@ -77,71 +148,45 @@ def write_step_summary(lines: list[str]) -> None:
 
 
 def main() -> int:
-    total_saved = 0
-    total_found = 0
-    failed_batches: list[int] = []
-    company_errors: list[str] = []
-    completed = False
-    print(f"Scraping top {TOP_N} companies in batches of {BATCH_SIZE}...")
-
-    for batch_index in range(MAX_BATCHES):
-        status, data, attempts = post_with_retry("/api/cron/scrape-jobs", {
-            "batch_index": batch_index, "batch_size": BATCH_SIZE, "top_n": TOP_N,
-        })
-        if status != 200:
-            print(f"  batch {batch_index}: FAILED after {attempts} attempt(s) — HTTP {status} {data}")
-            failed_batches.append(batch_index)
-            # Can't trust has_more from a failed batch; keep going through the
-            # known company universe so one bad batch doesn't abort the run.
-            time.sleep(5)
-            continue
-
-        saved = data.get("saved", 0)
-        found = data.get("found", 0)
-        total_saved += saved
-        total_found += found
-        names = ", ".join(data.get("companies_in_batch", []))
-        print(f"  batch {batch_index}/{data.get('total_batches','?')}: {names} -> found={found} saved={saved}")
-
-        if data.get("errors"):
-            for e in data["errors"]:
-                company_errors.append(str(e))
-            for e in data["errors"][:3]:
-                print(f"     ! {e}")
-
-        if not data.get("has_more"):
-            print("All batches processed.")
-            completed = True
-            break
-
-        # Gentle pace to avoid hammering ATS APIs / backend
-        time.sleep(3)
-
-    print(f"DONE. Total found={total_found}, saved={total_saved}")
-    if failed_batches:
-        print(f"Degraded: {len(failed_batches)} batch(es) failed: {failed_batches}")
-
-    # GitHub Actions run summary (visible on the job page)
-    summary = [
-        "## Scrape Jobs summary",
-        "",
-        f"- Total found: **{total_found}**",
-        f"- Total saved: **{total_saved}**",
-        f"- Batches failed: **{len(failed_batches)}**"
-        + (f" ({failed_batches})" if failed_batches else ""),
-        f"- Company-level errors: **{len(company_errors)}**",
-        f"- Completed cleanly: **{completed}**",
-    ]
-    if company_errors:
-        summary += ["", "<details><summary>Company errors</summary>", ""]
-        summary += [f"- {e}" for e in company_errors[:50]]
-        summary += ["", "</details>"]
-    write_step_summary(summary)
-
-    # Fail the workflow when batches errored or the run never completed, so a
-    # degraded scrape shows up red instead of a silent green.
-    if failed_batches or not completed:
+    companies = fetch_companies()
+    if not companies:
+        print("No companies returned by backend; nothing to scrape.")
         return 1
+    print(f"Scraping {len(companies)} companies on the runner (top_n={TOP_N})...")
+
+    client = httpx.Client(timeout=HTTP_TIMEOUT, follow_redirects=True, headers={"User-Agent": USER_AGENT})
+    total_rows = 0
+    total_saved = 0
+    total_skipped = 0
+    batch: list[dict] = []
+    try:
+        for i, company in enumerate(companies):
+            rows = scrape_company(client, company)
+            total_rows += len(rows)
+            if rows:
+                print(f"  [{i+1}/{len(companies)}] {company.get('name')}: {len(rows)} row(s)")
+            batch.extend(rows)
+            if len(batch) >= INGEST_BATCH:
+                res = flush(batch, is_last=False)
+                total_saved += int(res.get("saved", 0) or 0)
+                total_skipped += int(res.get("skipped", 0) or 0)
+                batch = []
+        # Final flush (always send, even if empty, so the backend prunes).
+        res = flush(batch, is_last=True)
+        total_saved += int(res.get("saved", 0) or 0)
+        total_skipped += int(res.get("skipped", 0) or 0)
+    finally:
+        client.close()
+
+    print(f"DONE. scraped_rows={total_rows} saved={total_saved} skipped={total_skipped}")
+    write_step_summary([
+        "## Scrape Jobs (runner-side) summary",
+        "",
+        f"- Companies scraped: **{len(companies)}**",
+        f"- Rows scraped on runner: **{total_rows}**",
+        f"- Saved to DB: **{total_saved}**",
+        f"- Skipped (filtered/dupe): **{total_skipped}**",
+    ])
     return 0
 
 
