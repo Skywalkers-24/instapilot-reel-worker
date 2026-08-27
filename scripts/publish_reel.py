@@ -205,6 +205,12 @@ def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "") -> tu
     container_id = data.get("container_id", "")
     if not container_id:
         return "ERROR", "", "no container_id returned"
+    audio_label = data.get("audio") or ""
+    audio_id_used = data.get("audio_id") or ""
+    if audio_id_used:
+        print(f"  audio attached: {audio_label or audio_id_used} (id={audio_id_used})")
+    else:
+        print("  no audio attached (none available / not applicable)")
     print(f"  container created: {container_id}")
 
     # 2. Poll status until FINISHED (retries live here on the runner).
@@ -289,10 +295,12 @@ def main() -> int:
     print(f"IG result: status={ig_status} media_id={media_id} msg={msg}")
 
     # 7. Report the outcome back to the backend (marks job POSTED, first comment).
-    backend_post("/api/cron/mark-published", {
+    _st, mark = backend_post("/api/cron/mark-published", {
         "reel_id": reel_id, "video_url": video_url,
         "media_id": media_id, "status": ig_status, "error": msg,
     })
+    if isinstance(mark, dict) and mark.get("media_audio_type"):
+        print(f"  media_audio_type: {mark.get('media_audio_type')}")
 
     if ig_status in ("PUBLISHED", "DRY_RUN", "CONTAINER_READY"):
         print("Done — reel published.")
