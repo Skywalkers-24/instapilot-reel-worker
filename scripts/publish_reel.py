@@ -12,7 +12,7 @@ Holds NO app code and NO secrets except CRON_SECRET + BACKEND_URL. It:
      The backend performs the Instagram publish (token stays server-side).
 
 Env:
-  BACKEND_URL       e.g. https://<your-backend-host>
+  BACKEND_URL       base URL of the backend (required)
   CRON_SECRET       shared secret (matches backend CRON_SECRET)
   GITHUB_TOKEN      auto-provided by Actions (for release upload/prune)
   GITHUB_REPOSITORY auto-provided by Actions (owner/repo)

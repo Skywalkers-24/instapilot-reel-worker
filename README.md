@@ -24,7 +24,7 @@ Repo → Settings → Secrets and variables → Actions:
 
 | Secret | Value |
 |--------|-------|
-| `BACKEND_URL` | `https://<your-backend-host>` |
+| `BACKEND_URL` | your backend's base URL (e.g. `https://<your-backend-host>`) |
 | `CRON_SECRET` | any long random string (must match the backend's `CRON_SECRET`) |
 
 `GITHUB_TOKEN` is provided automatically by Actions — no setup needed.
