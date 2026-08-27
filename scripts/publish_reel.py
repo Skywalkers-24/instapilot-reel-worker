@@ -153,59 +153,44 @@ def download(url: str, dest: str) -> bool:
     return True
 
 
-def render_video(avatar_path: str, content_path: str | None, out_path: str,
-                 total: float = REEL_SECONDS, intro: float = INTRO_SECONDS, fps: int = 30) -> None:
-    """Render the reel MP4 on the runner.
+def render_video(content_path: str, out_path: str, total: float = REEL_SECONDS, fps: int = 30) -> None:
+    """Render the reel MP4 on the runner from the CONTENT card only.
 
-    Frame 1 (poster, shown before playback) = the full-avatar image for `intro`
-    seconds; then the designed content card for the remainder. If the content
-    frame is missing, falls back to looping the avatar for the whole duration.
+    Playback starts on the content image immediately (no avatar intro). The
+    full-avatar image is set separately as the reel's grid COVER via the Graph
+    API `cover_url` — so the grid shows the avatar while the video plays content.
     """
     vf = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1"
-    silent = ["-f", "lavfi", "-t", f"{total:.3f}", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]
-
-    if content_path and os.path.exists(content_path):
-        main_dur = max(1.0, total - intro)
-        cmd = [
-            "ffmpeg", "-y",
-            "-loop", "1", "-t", f"{intro:.3f}", "-i", avatar_path,
-            "-loop", "1", "-t", f"{main_dur:.3f}", "-i", content_path,
-            *silent,
-            "-filter_complex", f"[0:v]{vf}[a];[1:v]{vf}[b];[a][b]concat=n=2:v=1[v]",
-            "-map", "[v]", "-map", "2:a",
-            "-c:v", "libx264", "-profile:v", "high", "-level", "4.1", "-pix_fmt", "yuv420p",
-            "-preset", "veryfast", "-r", str(fps), "-g", str(fps * 2), "-crf", "23",
-            "-c:a", "aac", "-b:a", "128k", "-ar", "48000",
-            "-movflags", "+faststart", "-shortest",
-            out_path,
-        ]
-    else:
-        cmd = [
-            "ffmpeg", "-y",
-            "-loop", "1", "-i", avatar_path,
-            *silent,
-            "-map", "0:v", "-map", "1:a",
-            "-vf", vf,
-            "-c:v", "libx264", "-tune", "stillimage",
-            "-profile:v", "high", "-level", "4.1", "-pix_fmt", "yuv420p",
-            "-preset", "veryfast", "-r", str(fps), "-g", str(fps * 2),
-            "-t", f"{total:.3f}", "-crf", "23",
-            "-c:a", "aac", "-b:a", "128k", "-ar", "48000",
-            "-movflags", "+faststart", "-shortest",
-            out_path,
-        ]
+    cmd = [
+        "ffmpeg", "-y",
+        "-loop", "1", "-i", content_path,
+        "-f", "lavfi", "-t", f"{total:.3f}", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
+        "-map", "0:v", "-map", "1:a",
+        "-vf", vf,
+        "-c:v", "libx264", "-tune", "stillimage",
+        "-profile:v", "high", "-level", "4.1", "-pix_fmt", "yuv420p",
+        "-preset", "veryfast", "-r", str(fps), "-g", str(fps * 2),
+        "-t", f"{total:.3f}", "-crf", "23",
+        "-c:a", "aac", "-b:a", "128k", "-ar", "48000",
+        "-movflags", "+faststart", "-shortest",
+        out_path,
+    ]
     subprocess.run(cmd, check=True, capture_output=True, text=True)
 
 
-def publish_via_backend(reel_id: int, video_url: str) -> tuple[str, str, str]:
+def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "") -> tuple[str, str, str]:
     """Drive the Instagram publish through THIN backend endpoints.
 
     The backend makes each single Graph API call (token stays server-side); the
-    runner owns the create → poll → publish loop and its retries. Returns
+    runner owns the create → poll → publish loop and its retries. `cover_url`
+    (the full-avatar image) becomes the reel's grid thumbnail. Returns
     (status, media_id, message).
     """
     # 1. Create the REELS container (one backend call).
-    st, data = backend_post("/api/cron/ig/create-container", {"reel_id": reel_id, "video_url": video_url})
+    payload = {"reel_id": reel_id, "video_url": video_url}
+    if cover_url:
+        payload["cover_url"] = cover_url
+    st, data = backend_post("/api/cron/ig/create-container", payload)
     if st != 200:
         return "ERROR", "", f"create-container HTTP {st}: {data}"
     status = data.get("status", "")
@@ -242,6 +227,14 @@ def publish_via_backend(reel_id: int, video_url: str) -> tuple[str, str, str]:
 
 
 def main() -> int:
+    # 0. Build the next reel (cadence-gated, fast, no publish). SKIPPED_CADENCE /
+    #    NO_JOB just mean "nothing to post right now" — not an error.
+    st, build = backend_post("/api/cron/auto-post", {})
+    if st == 200:
+        print(f"auto-post: {build.get('status')} reel_id={build.get('reel_id')}")
+    else:
+        print(f"auto-post HTTP {st}: {build}")
+
     # 1. Ask the backend for the next reel to publish.
     status, data = backend_post("/api/cron/next-reel", None)
     if status != 200:
@@ -255,21 +248,18 @@ def main() -> int:
     reel_id = reel["reel_id"]
     print(f"Next reel: #{reel_id} — {reel.get('title')!r}")
 
-    # 2. Download BOTH frames: avatar poster (frame 1) + content card (frame 2).
-    avatar_url = reel.get("avatar_cover_url") or reel.get("cover_url")
+    # 2. Download the CONTENT card (played from frame 1) + the AVATAR (grid cover).
     content_url = reel.get("content_cover_url")
-    if not avatar_url:
-        print("No avatar_cover_url in next-reel response.")
+    avatar_url = reel.get("avatar_cover_url") or reel.get("cover_url")
+    if not content_url or not download(content_url, "content.jpg"):
+        print("Content frame download failed — cannot render.")
         return 1
-    if not download(avatar_url, "avatar.jpg"):
-        print("Avatar frame download failed — cannot render.")
-        return 1
-    have_content = bool(content_url) and download(content_url, "content.jpg")
-    print(f"Frames downloaded (avatar=yes, content={'yes' if have_content else 'no'}).")
+    have_cover = bool(avatar_url) and download(avatar_url, "avatar.jpg")
+    print(f"Downloaded (content=yes, avatar_cover={'yes' if have_cover else 'no'}).")
 
-    # 3. Render the MP4 on the runner: full-avatar intro then content card.
+    # 3. Render the MP4 from the content card (playback starts on content).
     out = f"reel-{reel_id}.mp4"
-    render_video("avatar.jpg", "content.jpg" if have_content else None, out)
+    render_video("content.jpg", out)
     size = os.path.getsize(out)
     print(f"Rendered {out} ({size} bytes)")
 
@@ -278,13 +268,15 @@ def main() -> int:
     asset_name = f"reel-{reel_id}-{int(time.time())}.mp4"
     video_url = upload_asset(release_id, out, asset_name)
     print(f"Uploaded: {video_url}")
+    cover_public_url = avatar_url if have_cover else ""
 
     # 5. Prune to newest KEEP_ASSETS.
     prune_assets(release_id, KEEP_ASSETS)
 
     # 6. Publish via the thin backend endpoints (token stays server-side).
+    #    The avatar image is passed as the grid cover_url.
     print("Publishing to Instagram via backend endpoints...")
-    ig_status, media_id, msg = publish_via_backend(reel_id, video_url)
+    ig_status, media_id, msg = publish_via_backend(reel_id, video_url, cover_url=cover_public_url)
     print(f"IG result: status={ig_status} media_id={media_id} msg={msg}")
 
     # 7. Report the outcome back to the backend (marks job POSTED, first comment).

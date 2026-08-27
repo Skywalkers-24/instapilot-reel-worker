@@ -2,7 +2,7 @@ name: Publish Reel
 
 on:
   schedule:
-    - cron: '*/30 * * * *'   # every 30 minutes (UTC)
+    - cron: '*/10 * * * *'   # every 10 minutes (UTC); backend gate is authoritative
   workflow_dispatch:          # manual "Run workflow" button
 
 concurrency:
@@ -24,10 +24,32 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      # Cache a single static ffmpeg binary instead of apt-installing ~99
+      # packages every run (that was ~1m40s). First run downloads ~30MB once;
+      # every run after restores from cache in a couple of seconds.
+      - name: Cache ffmpeg static binary
+        id: cache-ffmpeg
+        uses: actions/cache@v4
+        with:
+          path: ~/ffmpeg-static
+          key: ffmpeg-static-amd64-v1
 
-      - name: Render + host + publish
+      - name: Download ffmpeg static binary (cache miss only)
+        if: steps.cache-ffmpeg.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/ffmpeg-static
+          curl -fsSL -o /tmp/ffmpeg.tar.xz \
+            https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+          tar -xJf /tmp/ffmpeg.tar.xz --strip-components=1 -C ~/ffmpeg-static
+          ~/ffmpeg-static/ffmpeg -version | head -1
+
+      - name: Put ffmpeg on PATH
+        run: echo "$HOME/ffmpeg-static" >> "$GITHUB_PATH"
+
+      # Single loop: the script builds the next reel (cadence-gated) → renders
+      # the MP4 → publishes via the thin backend endpoints → reports the outcome.
+      - name: Build + render + publish
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
