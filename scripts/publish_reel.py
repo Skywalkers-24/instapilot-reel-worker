@@ -2,14 +2,22 @@
 """
 InstaPilot Reel Worker (GitHub Actions).
 
-Holds NO app code and NO secrets except CRON_SECRET + BACKEND_URL. It:
-  1. Asks the backend for the next reel to publish   (POST /api/cron/next-reel)
-  2. Downloads that reel's cover image               (public cover_url)
-  3. Renders a 1080x1920 / 30s MP4 from the cover     (FFmpeg on the runner)
-  4. Uploads the MP4 to a GitHub Release              (public URL, no bandwidth cost)
-  5. Prunes old release assets, keeping only the 5 newest
-  6. Tells the backend the public video URL           (POST /api/cron/publish)
-     The backend performs the Instagram publish (token stays server-side).
+Holds NO app code and NO secrets except CRON_SECRET + BACKEND_URL. The Instagram
+token stays on the backend; the runner only drives the slow steps and calls thin
+backend endpoints. Flow:
+
+  1. Ask the backend for the next reel        (POST /api/cron/next-reel)
+  2. Download BOTH frames:
+       - avatar_cover_url  → frame 1 (poster: full avatar, shown before playback)
+       - content_cover_url → frame 2 (designed content card: company/role/CTA)
+  3. Render a 1080x1920 / 30s MP4 on the runner: ~3s avatar intro then content
+  4. Upload the MP4 to a GitHub Release        (public URL, no bandwidth cost)
+  5. Prune old release assets (keep newest 5)
+  6. Drive the Instagram publish via THIN backend endpoints (token stays server-side):
+       POST /api/cron/ig/create-container      → container_id
+       POST /api/cron/ig/container-status (loop, with retries here on the runner)
+       POST /api/cron/ig/publish               → media_id
+  7. Report the outcome                        (POST /api/cron/mark-published)
 
 Env:
   BACKEND_URL       base URL of the backend (required)
@@ -18,6 +26,10 @@ Env:
   GITHUB_REPOSITORY auto-provided by Actions (owner/repo)
   RELEASE_TAG       release tag to store assets under (default: reel-media)
   KEEP_ASSETS       how many MP4s to keep (default: 5)
+  INTRO_SECONDS     avatar intro duration (default: 3)
+  REEL_SECONDS      total reel duration (default: 30)
+  POLL_MAX          max container-status checks (default: 30)
+  POLL_INTERVAL     seconds between status checks (default: 10)
 """
 from __future__ import annotations
 
@@ -28,7 +40,6 @@ import sys
 import time
 import urllib.request
 import urllib.error
-import urllib.parse
 
 BACKEND_URL = os.environ["BACKEND_URL"].rstrip("/")
 CRON_SECRET = os.environ["CRON_SECRET"]
@@ -36,6 +47,10 @@ GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]
 GITHUB_REPO = os.environ["GITHUB_REPOSITORY"]  # owner/repo
 RELEASE_TAG = os.getenv("RELEASE_TAG", "reel-media")
 KEEP_ASSETS = int(os.getenv("KEEP_ASSETS", "5"))
+INTRO_SECONDS = float(os.getenv("INTRO_SECONDS", "3"))
+REEL_SECONDS = float(os.getenv("REEL_SECONDS", "30"))
+POLL_MAX = int(os.getenv("POLL_MAX", "30"))
+POLL_INTERVAL = float(os.getenv("POLL_INTERVAL", "10"))
 
 GH_API = "https://api.github.com"
 
@@ -127,115 +142,107 @@ def prune_assets(release_id: int, keep: int) -> None:
         print(f"Pruned old asset: {a['name']}")
 
 
-def download(url: str, dest: str) -> None:
+def download(url: str, dest: str) -> bool:
+    """Download an image to `dest`. Returns True on success (>=500 bytes)."""
     status, raw = _http("GET", url, timeout=120)
     if status != 200 or len(raw) < 500:
-        raise RuntimeError(f"Cover download failed: status={status} bytes={len(raw)}")
+        print(f"  download failed: {url} status={status} bytes={len(raw)}")
+        return False
     with open(dest, "wb") as f:
         f.write(raw)
+    return True
 
 
-def fetch_trending_audio_id(base: str, user_id: str, token: str) -> str:
-    """Get a trending, third-party-authorized audio_id (empty string if none)."""
-    try:
-        qs = urllib.parse.urlencode({"audio_type": "music", "user_id": user_id, "access_token": token})
-        status, raw = _http("GET", f"{base}/ig_audio?{qs}", timeout=30)
-        if status != 200:
-            print(f"  trending audio unavailable (status={status})")
-            return ""
-        for item in json.loads(raw).get("audio", []):
-            aid = item.get("audio_id")
-            if aid:
-                print(f"  trending audio: {item.get('title','?')} by {item.get('display_artist','?')} ({aid})")
-                return str(aid)
-    except Exception as e:
-        print(f"  trending audio fetch error: {e}")
-    return ""
+def render_video(avatar_path: str, content_path: str | None, out_path: str,
+                 total: float = REEL_SECONDS, intro: float = INTRO_SECONDS, fps: int = 30) -> None:
+    """Render the reel MP4 on the runner.
 
-
-def instagram_publish_reel(creds: dict, video_url: str, caption: str) -> tuple[str, str, str]:
-    """Publish a Reel via the Instagram Graph API. Runs here (no time limit).
-
-    Returns (status, media_id, message). Credentials are used in memory only.
-    Attaches trending music when available (falls back to no audio otherwise).
+    Frame 1 (poster, shown before playback) = the full-avatar image for `intro`
+    seconds; then the designed content card for the remainder. If the content
+    frame is missing, falls back to looping the avatar for the whole duration.
     """
-    if creds.get("mock_mode"):
-        return "PUBLISHED", "mock-media-id", "Mock publish."
-    if creds.get("dry_run"):
-        return "DRY_RUN", "", "Dry run: no publish attempted."
+    vf = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1"
+    silent = ["-f", "lavfi", "-t", f"{total:.3f}", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]
 
-    user_id = creds.get("user_id", "")
-    token = creds.get("access_token", "")
-    ver = creds.get("api_version", "v24.0")
-    if not (user_id and token):
-        return "NOT_CONFIGURED", "", "Instagram user id / token not configured."
+    if content_path and os.path.exists(content_path):
+        main_dur = max(1.0, total - intro)
+        cmd = [
+            "ffmpeg", "-y",
+            "-loop", "1", "-t", f"{intro:.3f}", "-i", avatar_path,
+            "-loop", "1", "-t", f"{main_dur:.3f}", "-i", content_path,
+            *silent,
+            "-filter_complex", f"[0:v]{vf}[a];[1:v]{vf}[b];[a][b]concat=n=2:v=1[v]",
+            "-map", "[v]", "-map", "2:a",
+            "-c:v", "libx264", "-profile:v", "high", "-level", "4.1", "-pix_fmt", "yuv420p",
+            "-preset", "veryfast", "-r", str(fps), "-g", str(fps * 2), "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k", "-ar", "48000",
+            "-movflags", "+faststart", "-shortest",
+            out_path,
+        ]
+    else:
+        cmd = [
+            "ffmpeg", "-y",
+            "-loop", "1", "-i", avatar_path,
+            *silent,
+            "-map", "0:v", "-map", "1:a",
+            "-vf", vf,
+            "-c:v", "libx264", "-tune", "stillimage",
+            "-profile:v", "high", "-level", "4.1", "-pix_fmt", "yuv420p",
+            "-preset", "veryfast", "-r", str(fps), "-g", str(fps * 2),
+            "-t", f"{total:.3f}", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k", "-ar", "48000",
+            "-movflags", "+faststart", "-shortest",
+            out_path,
+        ]
+    subprocess.run(cmd, check=True, capture_output=True, text=True)
 
-    base = f"https://graph.facebook.com/{ver}"
 
-    # Attach trending music if we can get an authorized track.
-    audio_id = fetch_trending_audio_id(base, user_id, token)
+def publish_via_backend(reel_id: int, video_url: str) -> tuple[str, str, str]:
+    """Drive the Instagram publish through THIN backend endpoints.
 
-    # 1. Create the REELS container
-    container_params = {
-        "media_type": "REELS", "video_url": video_url,
-        "caption": caption, "access_token": token,
-    }
-    if audio_id:
-        container_params["audio_configuration"] = json.dumps({
-            "audio_id": audio_id, "audio_volume": 100, "video_volume": 0,
-        })
-    body = urllib.parse.urlencode(container_params).encode()
-    status, raw = _http("POST", f"{base}/{user_id}/media",
-                        headers={"Content-Type": "application/x-www-form-urlencoded"},
-                        data=body, timeout=60)
-    if status != 200:
-        return "ERROR", "", f"container create failed: {raw[:300]!r}"
-    container_id = json.loads(raw)["id"]
+    The backend makes each single Graph API call (token stays server-side); the
+    runner owns the create → poll → publish loop and its retries. Returns
+    (status, media_id, message).
+    """
+    # 1. Create the REELS container (one backend call).
+    st, data = backend_post("/api/cron/ig/create-container", {"reel_id": reel_id, "video_url": video_url})
+    if st != 200:
+        return "ERROR", "", f"create-container HTTP {st}: {data}"
+    status = data.get("status", "")
+    if status in ("DRY_RUN",):
+        return "DRY_RUN", "", data.get("message", "Dry run.")
+    if status not in ("CREATED",):
+        return status or "ERROR", "", data.get("message", "container create failed")
+    container_id = data.get("container_id", "")
+    if not container_id:
+        return "ERROR", "", "no container_id returned"
+    print(f"  container created: {container_id}")
 
-    # 2. Poll until the container finishes processing (worker has no time limit)
-    for _ in range(30):  # up to ~5 min
-        time.sleep(10)
-        s2, r2 = _http("GET", f"{base}/{container_id}?fields=status_code&access_token={token}", timeout=30)
-        if s2 != 200:
-            return "ERROR", "", f"status poll failed: {r2[:200]!r}"
-        code = json.loads(r2).get("status_code")
+    # 2. Poll status until FINISHED (retries live here on the runner).
+    for attempt in range(POLL_MAX):
+        time.sleep(POLL_INTERVAL)
+        st, data = backend_post("/api/cron/ig/container-status", {"container_id": container_id})
+        if st != 200:
+            print(f"  status check HTTP {st} (attempt {attempt+1}); retrying")
+            continue
+        code = data.get("status_code", "UNKNOWN")
+        print(f"  container status: {code} (attempt {attempt+1})")
         if code == "FINISHED":
             break
         if code in ("ERROR", "EXPIRED"):
             return code, "", f"container processing {code}"
     else:
-        return "IN_PROGRESS", "", "Container did not finish in time."
+        return "IN_PROGRESS", "", "Container did not finish within polling window."
 
-    # 3. Publish
-    pub_body = urllib.parse.urlencode({"creation_id": container_id, "access_token": token}).encode()
-    s3, r3 = _http("POST", f"{base}/{user_id}/media_publish",
-                   headers={"Content-Type": "application/x-www-form-urlencoded"},
-                   data=pub_body, timeout=60)
-    if s3 != 200:
-        return "ERROR", "", f"publish failed: {r3[:300]!r}"
-    return "PUBLISHED", json.loads(r3).get("id", ""), "Published."
-
-
-def render_video(cover_path: str, out_path: str, duration: int = 30, fps: int = 30) -> None:
-    cmd = [
-        "ffmpeg", "-y",
-        "-loop", "1", "-i", cover_path,
-        "-f", "lavfi", "-t", str(duration), "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
-        "-map", "0:v", "-map", "1:a",
-        "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1",
-        "-c:v", "libx264", "-tune", "stillimage",
-        "-profile:v", "high", "-level", "4.1", "-pix_fmt", "yuv420p",
-        "-preset", "veryfast", "-r", str(fps), "-g", str(fps * 2),
-        "-t", str(duration), "-crf", "23",
-        "-c:a", "aac", "-b:a", "128k", "-ar", "48000",
-        "-movflags", "+faststart", "-shortest",
-        out_path,
-    ]
-    subprocess.run(cmd, check=True, capture_output=True, text=True)
+    # 3. Publish the finished container (one backend call).
+    st, data = backend_post("/api/cron/ig/publish", {"reel_id": reel_id, "container_id": container_id})
+    if st != 200:
+        return "ERROR", "", f"publish HTTP {st}: {data}"
+    return data.get("status", "ERROR"), data.get("media_id", ""), data.get("message", "")
 
 
 def main() -> int:
-    # 1. Ask backend for the next reel
+    # 1. Ask the backend for the next reel to publish.
     status, data = backend_post("/api/cron/next-reel", None)
     if status != 200:
         print(f"next-reel failed: {status} {data}")
@@ -248,38 +255,39 @@ def main() -> int:
     reel_id = reel["reel_id"]
     print(f"Next reel: #{reel_id} — {reel.get('title')!r}")
 
-    # 2. Download cover
-    download(reel["cover_url"], "cover.jpg")
-    print("Cover downloaded.")
+    # 2. Download BOTH frames: avatar poster (frame 1) + content card (frame 2).
+    avatar_url = reel.get("avatar_cover_url") or reel.get("cover_url")
+    content_url = reel.get("content_cover_url")
+    if not avatar_url:
+        print("No avatar_cover_url in next-reel response.")
+        return 1
+    if not download(avatar_url, "avatar.jpg"):
+        print("Avatar frame download failed — cannot render.")
+        return 1
+    have_content = bool(content_url) and download(content_url, "content.jpg")
+    print(f"Frames downloaded (avatar=yes, content={'yes' if have_content else 'no'}).")
 
-    # 3. Render MP4
+    # 3. Render the MP4 on the runner: full-avatar intro then content card.
     out = f"reel-{reel_id}.mp4"
-    render_video("cover.jpg", out)
+    render_video("avatar.jpg", "content.jpg" if have_content else None, out)
     size = os.path.getsize(out)
     print(f"Rendered {out} ({size} bytes)")
 
-    # 4. Upload to GitHub Release (bust cache with a timestamp suffix in the name)
+    # 4. Upload to a GitHub Release (public URL; timestamp busts CDN cache).
     release_id = ensure_release()
     asset_name = f"reel-{reel_id}-{int(time.time())}.mp4"
     video_url = upload_asset(release_id, out, asset_name)
     print(f"Uploaded: {video_url}")
 
-    # 5. Prune to newest KEEP_ASSETS
+    # 5. Prune to newest KEEP_ASSETS.
     prune_assets(release_id, KEEP_ASSETS)
 
-    # 6. Fetch IG credentials (in memory only) and publish from here — the
-    # runner has no time limit, unlike Vercel's 10s functions.
-    status, creds = backend_post("/api/cron/ig-credentials", None)
-    if status != 200:
-        print(f"ig-credentials failed: {status} {creds}")
-        return 1
-
-    caption = reel.get("caption", "")
-    print("Publishing to Instagram (from runner)...")
-    ig_status, media_id, msg = instagram_publish_reel(creds, video_url, caption)
+    # 6. Publish via the thin backend endpoints (token stays server-side).
+    print("Publishing to Instagram via backend endpoints...")
+    ig_status, media_id, msg = publish_via_backend(reel_id, video_url)
     print(f"IG result: status={ig_status} media_id={media_id} msg={msg}")
 
-    # 7. Report outcome back to the backend (updates DB, marks job POSTED)
+    # 7. Report the outcome back to the backend (marks job POSTED, first comment).
     backend_post("/api/cron/mark-published", {
         "reel_id": reel_id, "video_url": video_url,
         "media_id": media_id, "status": ig_status, "error": msg,
