@@ -135,10 +135,29 @@ def download(url: str, dest: str) -> None:
         f.write(raw)
 
 
+def fetch_trending_audio_id(base: str, user_id: str, token: str) -> str:
+    """Get a trending, third-party-authorized audio_id (empty string if none)."""
+    try:
+        qs = urllib.parse.urlencode({"audio_type": "music", "user_id": user_id, "access_token": token})
+        status, raw = _http("GET", f"{base}/ig_audio?{qs}", timeout=30)
+        if status != 200:
+            print(f"  trending audio unavailable (status={status})")
+            return ""
+        for item in json.loads(raw).get("audio", []):
+            aid = item.get("audio_id")
+            if aid:
+                print(f"  trending audio: {item.get('title','?')} by {item.get('display_artist','?')} ({aid})")
+                return str(aid)
+    except Exception as e:
+        print(f"  trending audio fetch error: {e}")
+    return ""
+
+
 def instagram_publish_reel(creds: dict, video_url: str, caption: str) -> tuple[str, str, str]:
     """Publish a Reel via the Instagram Graph API. Runs here (no time limit).
 
     Returns (status, media_id, message). Credentials are used in memory only.
+    Attaches trending music when available (falls back to no audio otherwise).
     """
     if creds.get("mock_mode"):
         return "PUBLISHED", "mock-media-id", "Mock publish."
@@ -153,11 +172,19 @@ def instagram_publish_reel(creds: dict, video_url: str, caption: str) -> tuple[s
 
     base = f"https://graph.facebook.com/{ver}"
 
+    # Attach trending music if we can get an authorized track.
+    audio_id = fetch_trending_audio_id(base, user_id, token)
+
     # 1. Create the REELS container
-    body = urllib.parse.urlencode({
+    container_params = {
         "media_type": "REELS", "video_url": video_url,
         "caption": caption, "access_token": token,
-    }).encode()
+    }
+    if audio_id:
+        container_params["audio_configuration"] = json.dumps({
+            "audio_id": audio_id, "audio_volume": 100, "video_volume": 0,
+        })
+    body = urllib.parse.urlencode(container_params).encode()
     status, raw = _http("POST", f"{base}/{user_id}/media",
                         headers={"Content-Type": "application/x-www-form-urlencoded"},
                         data=body, timeout=60)
