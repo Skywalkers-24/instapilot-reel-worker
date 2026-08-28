@@ -3,6 +3,9 @@ main = "src/index.js"
 compatibility_date = "2026-08-28"
 
 [triggers]
-# Trigger every 15 minutes. The backend's post_interval_minutes setting remains
-# authoritative, so missed or manual extra calls cannot over-post.
-crons = ["*/15 * * * *"]
+# 1. Reel Publish: every 15 minutes
+# 2. Job Scraping: 6:00 AM IST (00:30 UTC) & 4:00 PM IST (10:30 UTC) -> every 12 hours
+crons = [
+  "*/15 * * * *",
+  "30 0,10 * * *"
+]

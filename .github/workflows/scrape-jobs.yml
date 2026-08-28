@@ -1,9 +1,11 @@
 name: Scrape Jobs
 
 on:
+  repository_dispatch:
+    types: [scrape-jobs]     # fired by Cloudflare cron via backend trigger
+  workflow_dispatch:          # manual "Run workflow" button
   schedule:
-    - cron: '0 */12 * * *'    # every 12 hours (UTC)
-  workflow_dispatch:            # manual "Run workflow" button
+    - cron: '0 */12 * * *'    # fallback schedule
 
 concurrency:
   group: scrape-jobs
