@@ -747,9 +747,10 @@ def render_multi_scene_video(
                 "-preset", "veryfast",
                 "-crf", "22",
                 "-pix_fmt", "yuv420p",
+                "-af", f"apad,atrim=0:{REEL_SECONDS}",
                 "-c:a", "aac",
                 "-b:a", "128k",
-                "-shortest",
+                "-t", str(REEL_SECONDS),
                 "-r", str(FPS),
                 "-movflags", "+faststart",
                 str(tmp_out),
@@ -762,17 +763,18 @@ def render_multi_scene_video(
                 "-i", str(frame_dir / "frame_%04d.png"),
                 "-f", "lavfi",
                 "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
-                "-shortest",
                 "-c:v", "libx264",
                 "-preset", "veryfast",
                 "-crf", "22",
                 "-pix_fmt", "yuv420p",
+                "-t", str(REEL_SECONDS),
                 "-r", str(FPS),
                 "-movflags", "+faststart",
                 str(tmp_out),
             ]
         subprocess.run(cmd, check=True, capture_output=True, text=True)
         shutil.copyfile(tmp_out, out_path)
+
 
 
 
