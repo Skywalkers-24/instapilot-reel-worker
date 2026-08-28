@@ -24,7 +24,8 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
+
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 CRON_SECRET = os.getenv("CRON_SECRET", "")
@@ -520,17 +521,16 @@ def _bottom_scrim(
     return overlay
 
 
-def _top_fade(w: int, base: tuple[int, int, int], start_y: int, end_y: int, max_alpha: int = 255) -> Image.Image:
-    overlay = Image.new("RGBA", (w, end_y), (0, 0, 0, 0))
+def _top_fade(w: int, base: tuple[int, int, int], start_y: int, fade_len: int = 140, max_alpha: int = 255) -> Image.Image:
+    """Soft gradient blend at the top edge of the avatar image."""
+    overlay = Image.new("RGBA", (w, fade_len), (0, 0, 0, 0))
     odraw = ImageDraw.Draw(overlay)
-    for y in range(0, end_y):
-        if y <= start_y:
-            a = max_alpha
-        else:
-            t = (y - start_y) / max(1, end_y - start_y)
-            a = int(max_alpha * ((1 - t) ** 1.4))
+    for y in range(0, fade_len):
+        t = y / max(1, fade_len)
+        a = int(max_alpha * ((1 - t) ** 1.4))
         odraw.line((0, y, w, y), fill=(base[0], base[1], base[2], a))
     return overlay
+
 
 
 def _draw_centered_text(
@@ -622,17 +622,18 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
                 av_src.convert("RGB"), (CW, region_h),
                 method=Image.Resampling.LANCZOS, centering=(0.5, 0.28),
             )
+            # Paste avatar directly into canvas
             img.paste(cover, (0, HERO_TOP))
-            fade = _top_fade(CW, bg_rgb, start_y=HERO_TOP, end_y=HERO_TOP + 170, max_alpha=255)
-            fade_full = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
-            fade_full.paste(fade, (0, 0))
-            img = Image.alpha_composite(img.convert("RGBA"), fade_full).convert("RGB")
+            # Blend only the top edge seam (140px) with background
+            fade = _top_fade(CW, bg_rgb, start_y=0, fade_len=140, max_alpha=240)
+            img.paste(fade, (0, HERO_TOP), mask=fade)
             draw = ImageDraw.Draw(img)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Avatar stage error: {e}")
 
-    # 3. Header: eyebrow badge + company + white logo box
-    top_y = 58
+
+    # 3. Header: eyebrow badge + company + white logo box (moved down for optimal margin)
+    top_y = 78
     badge_font = get_font(26, bold=True)
     bbox = draw.textbbox((0, 0), badge_text, font=badge_font)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
@@ -651,10 +652,11 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
     draw.text((SAFE_MARGIN_X, top_y + 86), company_lines[0], font=company_fnt, fill=text_primary_rgb)
     draw.text((SAFE_MARGIN_X, top_y + 152), "OFFICIAL CAREERS OPENING", font=get_font(22, bold=True), fill=accent_rgb)
 
-    # 4. Job title
-    title_y = 268
-    role_lines, role_fnt = [], get_font(48, True)
-    for sz in range(86, 47, -4):
+    # 4. Job title (Clean, modern proportions)
+    title_y = 280
+
+    role_lines, role_fnt = [], get_font(40, True)
+    for sz in range(54, 33, -2):
         fnt = get_font(sz, True)
         words = role.upper().split()
         cur, lines = "", []
@@ -666,20 +668,21 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
                 if cur: lines.append(cur)
                 cur = w
         if cur: lines.append(cur)
-        if len(lines) <= 3:
+        if len(lines) <= 2:
             role_lines, role_fnt = lines, fnt
             break
     if not role_lines:
-        role_lines, role_fnt = [role.upper()], get_font(48, True)
+        role_lines, role_fnt = [role.upper()], get_font(36, True)
 
-    for line in role_lines[:3]:
+    for line in role_lines[:2]:
         draw.text((SAFE_MARGIN_X, title_y), line, font=role_fnt, fill=text_primary_rgb)
-        title_y += draw.textbbox((0, 0), line, font=role_fnt)[3] + 12
-    title_y += 12
-    draw.rounded_rectangle((SAFE_MARGIN_X, title_y, SAFE_MARGIN_X + 220, title_y + 12), radius=6, fill=accent_rgb)
+        title_y += draw.textbbox((0, 0), line, font=role_fnt)[3] + 8
+    title_y += 8
+    draw.rounded_rectangle((SAFE_MARGIN_X, title_y, SAFE_MARGIN_X + 180, title_y + 8), radius=4, fill=accent_rgb)
 
     # 5. Detail rows (compact, sit above the presenter)
-    details_y = max(516, title_y + 36)
+    details_y = title_y + 24
+
     details = [
         ("EXPERIENCE", exp),
         ("LOCATION", location),
