@@ -472,19 +472,126 @@ def get_ffmpeg_exe() -> str:
         return "ffmpeg"
 
 
+def _mix(c1: tuple[int, int, int], c2: tuple[int, int, int], t: float) -> tuple[int, int, int]:
+    t = max(0.0, min(1.0, t))
+    return (
+        int(c1[0] + (c2[0] - c1[0]) * t),
+        int(c1[1] + (c2[1] - c1[1]) * t),
+        int(c1[2] + (c2[2] - c1[2]) * t),
+    )
+
+
+def _vertical_gradient(w: int, h: int, top: tuple[int, int, int], bottom: tuple[int, int, int]) -> Image.Image:
+    ramp = Image.new("RGB", (1, h))
+    px = ramp.load()
+    for y in range(h):
+        px[0, y] = _mix(top, bottom, y / max(1, h - 1))
+    return ramp.resize((w, h))
+
+
+def _radial_glow(
+    w: int, h: int, color: tuple[int, int, int], center: tuple[int, int], radius: int, max_alpha: int = 80
+) -> Image.Image:
+    glow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    gdraw = ImageDraw.Draw(glow)
+    steps = 22
+    for i in range(steps, 0, -1):
+        r = int(radius * i / steps)
+        a = int(max_alpha * (1 - i / steps))
+        gdraw.ellipse(
+            (center[0] - r, center[1] - int(r * 1.2), center[0] + r, center[1] + int(r * 1.2)),
+            fill=(color[0], color[1], color[2], a),
+        )
+    return glow.filter(ImageFilter.GaussianBlur(48))
+
+
+def _bottom_scrim(
+    w: int, h: int, base: tuple[int, int, int], start_y: int, full_y: int, max_alpha: int = 255
+) -> Image.Image:
+    overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    odraw = ImageDraw.Draw(overlay)
+    for y in range(start_y, h):
+        if y >= full_y:
+            a = max_alpha
+        else:
+            t = (y - start_y) / max(1, full_y - start_y)
+            a = int(max_alpha * (t ** 1.5))
+        odraw.line((0, y, w, y), fill=(base[0], base[1], base[2], a))
+    return overlay
+
+
+def _top_fade(w: int, base: tuple[int, int, int], start_y: int, end_y: int, max_alpha: int = 255) -> Image.Image:
+    overlay = Image.new("RGBA", (w, end_y), (0, 0, 0, 0))
+    odraw = ImageDraw.Draw(overlay)
+    for y in range(0, end_y):
+        if y <= start_y:
+            a = max_alpha
+        else:
+            t = (y - start_y) / max(1, end_y - start_y)
+            a = int(max_alpha * ((1 - t) ** 1.4))
+        odraw.line((0, y, w, y), fill=(base[0], base[1], base[2], a))
+    return overlay
+
+
+def _draw_centered_text(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    text: str,
+    font_size: int,
+    fill: str | tuple[int, int, int],
+    bold: bool = True,
+) -> None:
+    font = get_font(font_size, bold=bold)
+    bbox = draw.textbbox((0, 0), text, font=font)
+    x1, y1, x2, y2 = box
+    tx = x1 + ((x2 - x1) - (bbox[2] - bbox[0])) // 2 - bbox[0]
+    ty = y1 + ((y2 - y1) - (bbox[3] - bbox[1])) // 2 - bbox[1]
+    draw.text((tx, ty), text, font=font, fill=fill)
+
+
+def _draw_cover_details(
+    draw: ImageDraw.ImageDraw,
+    details: list[tuple[str, str]],
+    x: int,
+    y: int,
+    w: int,
+    accent: tuple[int, int, int] | str,
+    card_bg: tuple[int, int, int, int] | str,
+    card_border: tuple[int, int, int, int] | str,
+    text_primary: tuple[int, int, int] | str,
+    text_muted: tuple[int, int, int] | str,
+    row_h: int = 84,
+    gap: int = 12,
+    max_rows: int = 3,
+) -> int:
+    bottom = y
+    for index, (label, value) in enumerate(details[:max_rows]):
+        top = y + (index * (row_h + gap))
+        bottom = top + row_h
+        draw.rounded_rectangle((x, top, x + w, bottom), radius=18, fill=card_bg, outline=card_border, width=2)
+        draw.rounded_rectangle((x, top, x + 8, bottom), radius=4, fill=accent)
+        draw.text((x + 28, top + int(row_h * 0.16)), label.upper(), font=get_font(18, bold=True), fill=text_muted)
+        value_text = str(value or "Verified").upper()
+        value_fnt, value_lines = get_best_fit_font(draw, value_text, w - 56, 44, start_size=32, min_size=20, bold=True, max_lines=1)
+        draw.text((x + 28, top + int(row_h * 0.44)), value_lines[0], font=value_fnt, fill=accent if index == 0 else text_primary)
+    return bottom
+
+
 def generate_local_content_cover(reel_info: dict) -> Image.Image:
-    """Generate the exact 1080x1920 job cover template with full-bleed lower avatar and rich card layout."""
+    """Generate the exact backend release template cover with HD gradient, avatar stage, and rich typography."""
     CW, CH = 1080, 1920
+    SAFE_MARGIN_X = 64
+    CONTENT_WIDTH = CW - SAFE_MARGIN_X * 2
+
     reel_id = reel_info.get("reel_id")
     palette = get_theme_palette(reel_id)
 
-    bg_top = palette["bg_top"]
-    bg_bot = palette["bg_bot"]
-    accent = palette["accent"]
-    accent_sub = palette["accent_sub"]
-
-    img = Image.new("RGB", (CW, CH), bg_bot)
-    draw = ImageDraw.Draw(img)
+    bg_rgb = palette["bg_top"]
+    accent_rgb = palette["accent"]
+    card_bg_rgb = palette["card_bg"]
+    card_border_rgb = (255, 255, 255, 40)
+    text_primary_rgb = (255, 255, 255)
+    text_muted_rgb = (148, 163, 184)
 
     company = (reel_info.get("company") or "Top Tech Company").strip()
     role = (reel_info.get("role") or reel_info.get("title") or "Software Engineer").strip()
@@ -494,113 +601,129 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
     badge_text = (reel_info.get("badge_text") or "HIRING NOW").upper()
     avatar_name = reel_info.get("avatar_name") or ""
 
-    # 1. Smooth gradient background
-    for y in range(0, CH, 16):
-        yr = y / CH
-        color = (
-            int(bg_top[0] + (bg_bot[0] - bg_top[0]) * yr),
-            int(bg_top[1] + (bg_bot[1] - bg_top[1]) * yr),
-            int(bg_top[2] + (bg_bot[2] - bg_top[2]) * yr),
-        )
-        draw.rectangle((0, y, CW, y + 16), fill=color)
-
-    # 2. Glowing ambient mesh
-    glow = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
-    gd = ImageDraw.Draw(glow)
-    gd.ellipse((CW // 2 - 400, 700, CW // 2 + 400, 1500), fill=palette["glow1"])
-    gd.ellipse((CW // 2 - 300, 1200, CW // 2 + 300, 1800), fill=palette["glow2"])
-    blurred_glow = glow.filter(ImageFilter.GaussianBlur(64))
-    img = Image.alpha_composite(img.convert("RGBA"), blurred_glow).convert("RGB")
+    # 1. HD gradient backdrop + accent glow
+    top_bg = _mix(bg_rgb, (255, 255, 255), 0.07)
+    base = _vertical_gradient(CW, CH, top_bg, bg_rgb).convert("RGBA")
+    glow = _radial_glow(CW, CH, accent_rgb, center=(CW // 2, 1230), radius=560, max_alpha=64)
+    img = Image.alpha_composite(base, glow).convert("RGB")
     draw = ImageDraw.Draw(img)
 
-    margin_x = 64
-    content_w = CW - margin_x * 2
+    # Thin top accent bar
+    draw.rectangle((0, 0, CW, 10), fill=accent_rgb)
 
-    # 3. Lower Stage: Full Avatar Illustration
-    HERO_TOP = 840
-    hero_h = CH - HERO_TOP
+    # 2. Presenter / avatar anchored to lower hero stage
+    HERO_TOP = 812
+    region_h = CH - HERO_TOP
     avatar_file = resolve_local_avatar_file(avatar_name, reel_id)
     if avatar_file and avatar_file.exists():
         try:
-            av_raw = Image.open(avatar_file).convert("RGB")
-            # Fit avatar photo into lower hero region
-            av_fitted = ImageOps.fit(av_raw, (content_w, hero_h - 40), method=Image.Resampling.LANCZOS, centering=(0.5, 0.25))
-            av_masked = Image.new("RGBA", (content_w, hero_h - 40), (0, 0, 0, 0))
-            av_masked.paste(av_fitted, (0, 0))
-            # Put rounded mask on the avatar
-            mask = Image.new("L", (content_w, hero_h - 40), 0)
-            ImageDraw.Draw(mask).rounded_rectangle((0, 0, content_w - 1, hero_h - 41), radius=28, fill=255)
-            av_masked.putalpha(mask)
-            img.paste(av_masked, (margin_x, HERO_TOP), av_masked)
+            av_src = Image.open(avatar_file)
+            cover = ImageOps.fit(
+                av_src.convert("RGB"), (CW, region_h),
+                method=Image.Resampling.LANCZOS, centering=(0.5, 0.28),
+            )
+            img.paste(cover, (0, HERO_TOP))
+            fade = _top_fade(CW, bg_rgb, start_y=HERO_TOP, end_y=HERO_TOP + 170, max_alpha=255)
+            fade_full = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
+            fade_full.paste(fade, (0, 0))
+            img = Image.alpha_composite(img.convert("RGBA"), fade_full).convert("RGB")
+            draw = ImageDraw.Draw(img)
         except Exception:
             pass
 
-    # 4. Top Header: Hiring Now pill badge + Company Name + White Logo Box
-    top_y = 70
-    badge_fnt = get_font(22, True)
-    bw = draw.textbbox((0, 0), badge_text, font=badge_fnt)[2] + 44
-    rounded_rect(draw, (margin_x, top_y, margin_x + bw, top_y + 48), 16, accent)
-    draw.text((margin_x + 22, top_y + 12), badge_text, font=badge_fnt, fill=bg_top)
+    # 3. Header: eyebrow badge + company + white logo box
+    top_y = 58
+    badge_font = get_font(26, bold=True)
+    bbox = draw.textbbox((0, 0), badge_text, font=badge_font)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    pw, ph = tw + 22 * 2, th + 10 * 2
+    draw.rounded_rectangle((SAFE_MARGIN_X, top_y, SAFE_MARGIN_X + pw, top_y + ph), radius=18, fill=accent_rgb)
+    draw.text((SAFE_MARGIN_X + 22, top_y + 10 - bbox[1]), badge_text, font=badge_font, fill=bg_rgb)
 
-    # Top right white logo box with face/logo
-    logo_size = 140
-    logo_x = CW - margin_x - logo_size
-    logo_y = top_y - 6
-    rounded_rect(draw, (logo_x, logo_y, logo_x + logo_size, logo_y + logo_size), 26, (255, 255, 255), outline=COLOR_CARD_BORDER, width=2)
+    logo_size = 158
+    logo_box = (CW - SAFE_MARGIN_X - logo_size, top_y - 4, CW - SAFE_MARGIN_X, top_y - 4 + logo_size)
+    draw.rounded_rectangle(logo_box, radius=28, fill="#ffffff", outline=card_border_rgb, width=2)
     face_logo = resolve_local_face_logo(avatar_name, reel_id)
-    face_in_box = face_logo.resize((104, 104), Image.Resampling.LANCZOS)
-    img.paste(face_in_box, (logo_x + (logo_size - 104) // 2, logo_y + (logo_size - 104) // 2), face_in_box)
+    face_in_box = face_logo.resize((120, 120), Image.Resampling.LANCZOS)
+    img.paste(face_in_box, (logo_box[0] + (logo_size - 120) // 2, logo_box[1] + (logo_size - 120) // 2), face_in_box)
 
-    # Company name
-    comp_fnt, comp_lines = get_best_fit_font(draw, company.upper(), content_w - logo_size - 60, 80, start_size=52, min_size=32, bold=True, max_lines=1)
-    draw.text((margin_x, top_y + 72), comp_lines[0], font=comp_fnt, fill=COLOR_TEXT_WHITE)
-    draw.text((margin_x, top_y + 132), "OFFICIAL CAREERS OPENING", font=get_font(20, True), fill=accent)
+    company_fnt, company_lines = get_best_fit_font(draw, company.upper(), CW - SAFE_MARGIN_X * 2 - logo_size - 40, 80, start_size=58, min_size=32, bold=True, max_lines=1)
+    draw.text((SAFE_MARGIN_X, top_y + 86), company_lines[0], font=company_fnt, fill=text_primary_rgb)
+    draw.text((SAFE_MARGIN_X, top_y + 152), "OFFICIAL CAREERS OPENING", font=get_font(22, bold=True), fill=accent_rgb)
 
-    # 5. Role Title
-    title_y = top_y + 184
-    role_fnt, role_lines = get_best_fit_font(draw, role.upper(), content_w, 160, start_size=46, min_size=28, bold=True, max_lines=3)
-    ry = title_y
-    for rl in role_lines:
-        draw.text((margin_x, ry), rl, font=role_fnt, fill=COLOR_TEXT_WHITE)
-        ry += draw.textbbox((0, 0), rl, font=role_fnt)[3] + 10
+    # 4. Job title
+    title_y = 268
+    role_lines, role_fnt = [], get_font(48, True)
+    for sz in range(86, 47, -4):
+        fnt = get_font(sz, True)
+        words = role.upper().split()
+        cur, lines = "", []
+        for w in words:
+            trial = f"{cur} {w}".strip()
+            if draw.textbbox((0, 0), trial, font=fnt)[2] <= CONTENT_WIDTH:
+                cur = trial
+            else:
+                if cur: lines.append(cur)
+                cur = w
+        if cur: lines.append(cur)
+        if len(lines) <= 3:
+            role_lines, role_fnt = lines, fnt
+            break
+    if not role_lines:
+        role_lines, role_fnt = [role.upper()], get_font(48, True)
 
-    # Accent underline
-    rounded_rect(draw, (margin_x, ry + 4, margin_x + 180, ry + 12), 4, accent)
+    for line in role_lines[:3]:
+        draw.text((SAFE_MARGIN_X, title_y), line, font=role_fnt, fill=text_primary_rgb)
+        title_y += draw.textbbox((0, 0), line, font=role_fnt)[3] + 12
+    title_y += 12
+    draw.rounded_rectangle((SAFE_MARGIN_X, title_y, SAFE_MARGIN_X + 220, title_y + 12), radius=6, fill=accent_rgb)
 
-    # 6. Specs Rows with Accent Tabs
-    specs_y = ry + 32
-    specs = [
+    # 5. Detail rows (compact, sit above the presenter)
+    details_y = max(516, title_y + 36)
+    details = [
         ("EXPERIENCE", exp),
         ("LOCATION", location),
         ("PACKAGE", package),
     ]
+    _draw_cover_details(
+        draw, details, SAFE_MARGIN_X, details_y, CONTENT_WIDTH,
+        accent_rgb, card_bg_rgb, card_border_rgb, text_primary_rgb, text_muted_rgb,
+        row_h=84, gap=12, max_rows=3,
+    )
 
-    for label, val in specs:
-        rounded_rect(draw, (margin_x, specs_y, margin_x + content_w, specs_y + 86), 18, palette["card_bg"], outline=COLOR_CARD_BORDER, width=1)
-        rounded_rect(draw, (margin_x, specs_y, margin_x + 8, specs_y + 86), 4, accent)
-        draw.text((margin_x + 24, specs_y + 14), label.upper(), font=get_font(17, True), fill=COLOR_TEXT_SUB)
-        vfnt, vlines = get_best_fit_font(draw, val.upper(), content_w - 48, 44, start_size=24, min_size=18, bold=True, max_lines=1)
-        draw.text((margin_x + 24, specs_y + 44), vlines[0], font=vfnt, fill=COLOR_TEXT_WHITE if label != "EXPERIENCE" else accent)
-        specs_y += 98
+    # 6. Bottom scrim for crisp CTA readability
+    scrim = _bottom_scrim(CW, CH, bg_rgb, start_y=1430, full_y=1878, max_alpha=252)
+    img = Image.alpha_composite(img.convert("RGBA"), scrim).convert("RGB")
+    draw = ImageDraw.Draw(img)
 
-    # 7. Lower Tags above button
-    tag_y = CH - 240
-    tag_str = "FRESHERS / 0-3 YOE • OFFICIAL APPLY LINK • TOP ROLE"
-    rounded_rect(draw, (margin_x + 20, tag_y, CW - margin_x - 20, tag_y + 46), 14, (16, 22, 36, 230), outline=COLOR_CARD_BORDER, width=1)
-    tfnt, tlines = get_best_fit_font(draw, tag_str, content_w - 60, 36, start_size=17, min_size=14, bold=True, max_lines=1)
-    draw.text(((CW - draw.textbbox((0, 0), tlines[0], font=tfnt)[2]) // 2, tag_y + 12), tlines[0], font=tfnt, fill=COLOR_TEXT_WHITE)
+    # 7. Info pill bar (bottom-anchored)
+    pill_top, pill_h = 1560, 84
+    pill_box = (SAFE_MARGIN_X, pill_top, SAFE_MARGIN_X + CONTENT_WIDTH, pill_top + pill_h)
+    draw.rounded_rectangle(pill_box, radius=20, fill=card_bg_rgb, outline=card_border_rgb, width=2)
+    seg = CONTENT_WIDTH // 3
+    _draw_centered_text(draw, (pill_box[0], pill_top, pill_box[0] + seg, pill_top + pill_h), "FRESHERS / 0-3 YOE", 24, accent_rgb)
+    _draw_centered_text(draw, (pill_box[0] + seg, pill_top, pill_box[0] + 2 * seg, pill_top + pill_h), "OFFICIAL APPLY LINK", 24, text_primary_rgb)
+    _draw_centered_text(draw, (pill_box[0] + 2 * seg, pill_top, pill_box[2], pill_top + pill_h), "TOP COMPANY ROLE", 23, text_muted_rgb)
+    for k in (1, 2):
+        dx = pill_box[0] + seg * k
+        draw.line((dx, pill_top + 20, dx, pill_top + pill_h - 20), fill=card_border_rgb, width=2)
 
-    # 8. Big Cyan Apply CTA Button
-    btn_y = CH - 175
-    rounded_rect(draw, (margin_x, btn_y, margin_x + content_w, btn_y + 92), 24, accent)
-    cta_str = "APPLY VIA LINK IN BIO →"
-    btn_fnt = get_font(32, True)
-    draw.text(((CW - draw.textbbox((0, 0), cta_str, font=btn_fnt)[2]) // 2, btn_y + 26), cta_str, font=btn_fnt, fill=bg_top)
+    # 8. CTA button (bottom-anchored)
+    cta_top, cta_h = 1676, 156
+    draw.rounded_rectangle((SAFE_MARGIN_X, cta_top, SAFE_MARGIN_X + CONTENT_WIDTH, cta_top + cta_h), radius=28, fill=accent_rgb)
+    cta_str = "APPLY VIA LINK IN BIO  →"
+    _draw_centered_text(draw, (SAFE_MARGIN_X, cta_top, SAFE_MARGIN_X + CONTENT_WIDTH, cta_top + cta_h), cta_str, 42, bg_rgb)
 
-    # 9. Small Disclaimer
-    draw.text((margin_x + 10, CH - 60), "Source: Official Careers Page", font=get_font(15, False), fill=COLOR_TEXT_MUTED)
+    # 9. Footer notes
+    font_src = get_font(14, bold=True)
+    font_legal = get_font(12, bold=False)
+    draw.text((SAFE_MARGIN_X, CH - 40), f"Source: {company} Careers Portal", font=font_src, fill=text_muted_rgb)
+    legal_text = "Trademarks belong to their respective owners."
+    l_w = draw.textbbox((0, 0), legal_text, font=font_legal)[2]
+    draw.text((CW - SAFE_MARGIN_X - l_w, CH - 40), legal_text, font=font_legal, fill=(80, 100, 130))
 
     return img
+
 
 
 
@@ -619,8 +742,9 @@ def render_multi_scene_video(
     skills = reel_info.get("skills") or ["Full Stack", "Problem Solving", "System Design", "Engineering"]
     badge_text = (reel_info.get("badge_text") or "OFFICIAL HIRING ALERT").upper()
     avatar_name = reel_info.get("avatar_name") or ""
+    reel_id = reel_info.get("reel_id")
 
-    face_raw = resolve_local_face_logo(avatar_name)
+    face_raw = resolve_local_face_logo(avatar_name, reel_id)
     face_sm = face_raw.resize((96, 96), Image.Resampling.LANCZOS)
     face_md = face_raw.resize((172, 172), Image.Resampling.LANCZOS)
     face_lg = face_raw.resize((252, 252), Image.Resampling.LANCZOS)
@@ -630,41 +754,41 @@ def render_multi_scene_video(
     else:
         content_img = Image.open(content_img_or_path).convert("RGB")
 
-
     margin = 38
     inner_w = W - margin * 2
     card_y = 182
     card_h = 974
 
-    # ── Fast Pre-Render Cache for All 4 Scenes (Reduces rendering time by 10x) ──
-    def build_base_scene(scene_name: str) -> Image.Image:
-        base = Image.new("RGB", (W, H), COLOR_BG_BASE)
-        draw = ImageDraw.Draw(base)
+    pad = 14
+    avail_w = inner_w - pad * 2
+    avail_h = card_h - pad * 2
+    orig_w, orig_h = content_img.size
+    base_scale = min(avail_w / orig_w, avail_h / orig_h)
 
-        # Background gradient
-        for y in range(0, H, 16):
-            yr = y / H
-            color = (int(12 + 16 * yr), int(16 + 22 * yr), int(26 + 32 * (1 - yr)))
-            draw.rectangle((0, y, W, y + 16), fill=color)
+    def draw_frame(frame: int) -> Image.Image:
+        img = create_dynamic_background(frame)
+        draw = ImageDraw.Draw(img)
+        scene_name = get_scene(frame)
 
-        # Header branding
-        base.paste(face_sm, (margin, 70), face_sm)
+        # 1. Top progress bar
+        progress = int((frame + 1) / TOTAL_FRAMES * inner_w)
+        rounded_rect(draw, (margin, 46, W - margin, 54), 4, (40, 48, 64))
+        rounded_rect(draw, (margin, 46, margin + progress, 54), 4, COLOR_ACCENT)
+
+        # 2. Header Bar
+        img.paste(face_sm, (margin, 70), face_sm)
         draw.text((margin + 112, 78), CHANNEL_DISPLAY_NAME, font=FONT_MED, fill=COLOR_TEXT_WHITE)
         draw.text((margin + 112, 112), CHANNEL_TAGLINE, font=FONT_SMALL, fill=COLOR_TEXT_MUTED)
 
-        # Footer branding
-        draw.text((margin + 10, H - 72), CHANNEL_HANDLE, font=FONT_MED, fill=COLOR_TEXT_WHITE)
-        draw.text((margin + 10, H - 38), CHANNEL_FOOTER_NOTE, font=FONT_SMALL, fill=COLOR_TEXT_MUTED)
-
-        card_surface = Image.new("RGBA", (inner_w, card_h), COLOR_CARD_BG)
-        card_draw = ImageDraw.Draw(card_surface)
-        card_draw.rounded_rectangle((0, 0, inner_w, card_h), radius=32, fill=COLOR_CARD_BG, outline=COLOR_CARD_BORDER, width=2)
-        base.paste(card_surface, (margin, card_y), card_surface)
-
         if scene_name == "intro_hook":
+            card_surface = Image.new("RGBA", (inner_w, card_h), COLOR_CARD_BG)
+            card_draw = ImageDraw.Draw(card_surface)
+            card_draw.rounded_rectangle((0, 0, inner_w, card_h), radius=32, fill=COLOR_CARD_BG, outline=COLOR_CARD_BORDER, width=2)
+            img.paste(card_surface, (margin, card_y), card_surface)
+
             av_x = (W - 252) // 2
             av_y = card_y + 48
-            base.paste(face_lg, (av_x, av_y), face_lg)
+            img.paste(face_lg, (av_x, av_y), face_lg)
             draw.ellipse((av_x, av_y, av_x + 252, av_y + 252), outline=COLOR_ACCENT_ORANGE, width=4)
 
             pill_w = max(240, draw.textbbox((0, 0), badge_text, font=FONT_BADGE)[2] + 48)
@@ -688,7 +812,39 @@ def render_multi_scene_video(
             rounded_rect(draw, (margin + 32, card_y + 780, W - margin - 32, card_y + 886), 20, (30, 38, 58), outline=COLOR_ACCENT, width=1)
             draw.text(((W - draw.textbbox((0, 0), "Check 1st pinned comment for direct apply link 👇", font=FONT_BODY)[2]) // 2, card_y + 816), "Check 1st pinned comment for direct apply link 👇", font=FONT_BODY, fill=COLOR_TEXT_WHITE)
 
+        elif scene_name == "content_card":
+            card_surface = Image.new("RGBA", (inner_w, card_h), (20, 25, 38, 245))
+            card_draw = ImageDraw.Draw(card_surface)
+            card_draw.rounded_rectangle((0, 0, inner_w, card_h), radius=32, fill=(20, 25, 38, 245), outline=COLOR_CARD_BORDER, width=2)
+            img.paste(card_surface, (margin, card_y), card_surface)
+
+            # Subtle Ken Burns dynamic zoom across frames
+            scene_progress = max(0.0, min(1.0, (frame - FPS * 4.0) / (FPS * 5.0)))
+            scale = base_scale * (1.0 + 0.04 * scene_progress)
+            new_w = int(orig_w * scale)
+            new_h = int(orig_h * scale)
+
+            scaled_cover = content_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            offset_x = margin + pad + (avail_w - new_w) // 2
+            offset_y = card_y + pad + (avail_h - new_h) // 2
+
+            crop_x1 = max(0, margin + pad - offset_x)
+            crop_y1 = max(0, card_y + pad - offset_y)
+            crop_x2 = min(new_w, margin + pad + avail_w - offset_x)
+            crop_y2 = min(new_h, card_y + pad + avail_h - offset_y)
+            
+            if crop_x2 > crop_x1 and crop_y2 > crop_y1:
+                cropped = scaled_cover.crop((crop_x1, crop_y1, crop_x2, crop_y2))
+                img.paste(cropped, (max(offset_x, margin + pad), max(offset_y, card_y + pad)))
+
+            draw.rounded_rectangle((margin + pad, card_y + pad, margin + pad + avail_w, card_y + pad + avail_h), radius=22, outline=(255, 255, 255, 50), width=1)
+
         elif scene_name == "role_details":
+            card_surface = Image.new("RGBA", (inner_w, card_h), COLOR_CARD_BG)
+            card_draw = ImageDraw.Draw(card_surface)
+            card_draw.rounded_rectangle((0, 0, inner_w, card_h), radius=32, fill=COLOR_CARD_BG, outline=COLOR_CARD_BORDER, width=2)
+            img.paste(card_surface, (margin, card_y), card_surface)
+
             draw.text((margin + 32, card_y + 26), "OFFICIAL JOB SPECIFICATIONS", font=FONT_MED, fill=COLOR_ACCENT)
 
             specs = [
@@ -723,10 +879,15 @@ def render_multi_scene_video(
             rounded_rect(draw, (margin + 24, card_y + card_h - 96, W - margin - 24, card_y + card_h - 26), 18, (255, 106, 0, 40), outline=COLOR_ACCENT_ORANGE, width=2)
             draw.text(((W - draw.textbbox((0, 0), "💾 TAP SAVE — Apply from laptop tonight!", font=FONT_BODY)[2]) // 2, card_y + card_h - 70), "💾 TAP SAVE — Apply from laptop tonight!", font=FONT_BODY, fill=COLOR_TEXT_WHITE)
 
-        elif scene_name == "cta_action":
+        else:
+            card_surface = Image.new("RGBA", (inner_w, card_h), COLOR_CARD_BG)
+            card_draw = ImageDraw.Draw(card_surface)
+            card_draw.rounded_rectangle((0, 0, inner_w, card_h), radius=32, fill=COLOR_CARD_BG, outline=COLOR_CARD_BORDER, width=2)
+            img.paste(card_surface, (margin, card_y), card_surface)
+
             av_x = (W - 172) // 2
             av_y = card_y + 42
-            base.paste(face_md, (av_x, av_y), face_md)
+            img.paste(face_md, (av_x, av_y), face_md)
             draw.ellipse((av_x, av_y, av_x + 172, av_y + 172), outline=COLOR_ACCENT, width=4)
 
             draw.text(((W - draw.textbbox((0, 0), "HOW TO APPLY", font=FONT_HERO)[2]) // 2, card_y + 242), "HOW TO APPLY", font=FONT_HERO, fill=COLOR_TEXT_WHITE)
@@ -742,54 +903,11 @@ def render_multi_scene_video(
             rounded_rect(draw, (margin + 48, card_y + 734, W - margin - 48, card_y + 834), 26, (18, 24, 38), outline=COLOR_ACCENT_ORANGE, width=3)
             draw.text(((W - draw.textbbox((0, 0), "TAP SAVE NOW 🚀", font=FONT_CTA)[2]) // 2, card_y + 766), "TAP SAVE NOW 🚀", font=FONT_CTA, fill=COLOR_ACCENT_ORANGE)
 
-        return base
+        draw.text((margin + 10, H - 72), CHANNEL_HANDLE, font=FONT_MED, fill=COLOR_TEXT_WHITE)
+        draw.text((margin + 10, H - 38), CHANNEL_FOOTER_NOTE, font=FONT_SMALL, fill=COLOR_TEXT_MUTED)
 
-    cached_scenes = {
-        "intro_hook": build_base_scene("intro_hook"),
-        "content_card": build_base_scene("content_card"),
-        "role_details": build_base_scene("role_details"),
-        "cta_action": build_base_scene("cta_action"),
-    }
+        return img
 
-    pad = 14
-    avail_w = inner_w - pad * 2
-    avail_h = card_h - pad * 2
-    orig_w, orig_h = content_img.size
-    base_scale = min(avail_w / orig_w, avail_h / orig_h)
-
-    def draw_frame(frame: int) -> Image.Image:
-        scene_name = get_scene(frame)
-        base = cached_scenes[scene_name].copy()
-        draw = ImageDraw.Draw(base)
-
-        # Dynamic scene 2 Ken Burns Zoom
-        if scene_name == "content_card":
-            scene_progress = max(0.0, min(1.0, (frame - FPS * 4.0) / (FPS * 5.0)))
-            scale = base_scale * (1.0 + 0.04 * scene_progress)
-            new_w = int(orig_w * scale)
-            new_h = int(orig_h * scale)
-
-            scaled_cover = content_img.resize((new_w, new_h), Image.Resampling.BILINEAR)
-            offset_x = margin + pad + (avail_w - new_w) // 2
-            offset_y = card_y + pad + (avail_h - new_h) // 2
-
-            crop_x1 = max(0, margin + pad - offset_x)
-            crop_y1 = max(0, card_y + pad - offset_y)
-            crop_x2 = min(new_w, margin + pad + avail_w - offset_x)
-            crop_y2 = min(new_h, card_y + pad + avail_h - offset_y)
-            
-            if crop_x2 > crop_x1 and crop_y2 > crop_y1:
-                cropped = scaled_cover.crop((crop_x1, crop_y1, crop_x2, crop_y2))
-                base.paste(cropped, (max(offset_x, margin + pad), max(offset_y, card_y + pad)))
-
-            draw.rounded_rectangle((margin + pad, card_y + pad, margin + pad + avail_w, card_y + pad + avail_h), radius=22, outline=(255, 255, 255, 50), width=1)
-
-        # Progress bar
-        progress = int((frame + 1) / TOTAL_FRAMES * inner_w)
-        rounded_rect(draw, (margin, 46, W - margin, 54), 4, (40, 48, 64))
-        rounded_rect(draw, (margin, 46, margin + progress, 54), 4, COLOR_ACCENT)
-
-        return base
 
     with tempfile.TemporaryDirectory(prefix="runner_multi_reel_") as tmp:
         frame_dir = Path(tmp)
