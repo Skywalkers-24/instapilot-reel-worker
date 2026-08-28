@@ -1,0 +1,15 @@
+{
+  "name": "instapilot-reel-publish-cron",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker cron trigger for Instapilot reel publishing",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^3.109.2"
+  }
+}
