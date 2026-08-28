@@ -298,9 +298,9 @@ def resolve_local_face_logo(avatar_name: str | None, reel_id: int | None = None)
             name_clean = Path(avatar_name).stem.lower().replace("avatar_", "").replace("face_", "")
             match = re.search(r"av(\d+)", name_clean)
             num_str = match.group(1) if match else None
-            
+
             # 1. Exact match by number (final_face_avXX_*.png)
-            if num_str:
+            if num_str and all_final:
                 target_prefix = f"final_face_av{int(num_str):02d}_"
                 for f in all_final:
                     if f.stem.lower().startswith(target_prefix):
@@ -308,6 +308,12 @@ def resolve_local_face_logo(avatar_name: str | None, reel_id: int | None = None)
                             return Image.open(f).convert("RGBA")
                         except Exception:
                             pass
+                # If exact number not present, use modulo index from avatar number
+                av_idx = int(num_str) % len(all_final)
+                try:
+                    return Image.open(all_final[av_idx]).convert("RGBA")
+                except Exception:
+                    pass
 
             # 2. Match by clean slug
             for f in all_final:
@@ -351,6 +357,12 @@ def resolve_local_avatar_file(avatar_name: str | None, reel_id: int | None = Non
         if p.exists():
             return p
         stem = Path(avatar_name).stem.lower().replace("avatar_", "")
+        match = re.search(r"av(\d+)", stem)
+        if match:
+            num = int(match.group(1))
+            for f in all_av:
+                if f"av{num:02d}" in f.stem.lower() or f"av{num}" in f.stem.lower():
+                    return f
         for f in all_av:
             if stem in f.stem.lower():
                 return f
@@ -359,6 +371,7 @@ def resolve_local_avatar_file(avatar_name: str | None, reel_id: int | None = Non
         idx = (int(reel_id or 0) % len(all_av)) if reel_id else 0
         return all_av[idx]
     return None
+
 
 
 
@@ -385,80 +398,101 @@ def pick_young_indian_voice(avatar_name: str | None = None) -> str:
     """Pick young 20-25 age Indian voice: ~80% soft female, ~20% energetic male."""
     import random
 
-    female_pool = ["en-IN-NeerjaNeural", "en-IN-KavyaNeural"]
+    female_pool = ["en-IN-NeerjaNeural"]
     male_pool = ["en-IN-PrabhatNeural"]
 
     if avatar_name:
         av_lower = avatar_name.lower()
         if "female" in av_lower or "girl" in av_lower:
-            return random.choice(female_pool)
+            return "en-IN-NeerjaNeural"
         if "male" in av_lower or "boy" in av_lower:
-            return random.choice(male_pool)
+            return "en-IN-PrabhatNeural"
 
     # Weighted rotation: 80% female, 20% male
     return random.choices(
-        population=[random.choice(female_pool), random.choice(male_pool)],
+        population=["en-IN-NeerjaNeural", "en-IN-PrabhatNeural"],
         weights=[0.80, 0.20],
         k=1,
     )[0]
 
 
-def generate_voiceover(reel_info: dict, out_audio_path: str) -> bool:
-    """Generate punchy, natural young Indian voiceover with follow/share CTA."""
-    import random
 
+def build_viral_loop_script(reel_info: dict) -> str:
+    """Build high-retention 18s viral script designed for infinite seamless looping."""
     raw_company = reel_info.get("company") or "Top Tech Company"
     raw_role = reel_info.get("role") or reel_info.get("title") or "Software Engineer"
     raw_location = reel_info.get("location") or "India"
-    avatar_name = reel_info.get("avatar_name")
 
     company = clean_spoken_text(raw_company)
     role = clean_spoken_text(raw_role)
     location = clean_spoken_text(raw_location)
 
-    # Simple, punchy, human script asking to follow and share
     script_text = (
-        f"Stop scrolling! {company} is hiring for {role}. "
-        f"Freshers and 2024 to 2026 batches can apply. Location is {location}. "
-        f"Direct apply link is pinned in the first comment! "
-        f"Save this reel, share it with your friends, and follow TrendyApaa for daily verified tech jobs."
+        f"Stop scrolling! {company} is hiring {role} freshers. "
+        f"2024 to 2026 batch eligible in {location}. "
+        f"Comment APPLY to get the direct career link sent to your DMs! "
+        f"Tag your batchmates and tap save before applications close!"
     )
+    return script_text
 
+
+def generate_voiceover(reel_info: dict, out_audio_path: str) -> tuple[bool, list[dict]]:
+    """Generate punchy young Indian voiceover and extract timestamped subtitle cues."""
+    import random
+
+    avatar_name = reel_info.get("avatar_name")
+    script_text = build_viral_loop_script(reel_info)
     voice_name = os.getenv("TTS_VOICE") or pick_young_indian_voice(avatar_name)
+    subtitles: list[dict] = []
 
-    # 1. Try python edge_tts module
+    # 1. Try python edge_tts Communicate stream directly
     try:
         import asyncio
         import edge_tts
 
         async def _synth():
-            communicate = edge_tts.Communicate(script_text, voice_name, rate="+4%")
-            await communicate.save(out_audio_path)
+            communicate = edge_tts.Communicate(script_text, voice_name, rate="+10%")
+            with open(out_audio_path, "wb") as f:
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        f.write(chunk["data"])
+                    elif chunk["type"] == "SentenceBoundary":
+                        start_sec = chunk["offset"] / 1e7
+                        dur_sec = chunk["duration"] / 1e7
+                        subtitles.append({
+                            "text": chunk["text"],
+                            "start": start_sec,
+                            "end": start_sec + dur_sec,
+                        })
 
         asyncio.run(_synth())
         if os.path.exists(out_audio_path) and os.path.getsize(out_audio_path) > 1000:
-            print(f"  Edge-TTS voiceover ({voice_name}) generated: {out_audio_path}")
-            return True
+            print(f"  Edge-TTS voiceover ({voice_name}) generated with {len(subtitles)} subtitle cues: {out_audio_path}")
+            return True, subtitles
     except Exception as e:
-        print(f"  Edge-TTS python fallback: {e}")
+        print(f"  Edge-TTS python stream error: {e}")
 
-    # 2. Try edge-tts CLI
+
+    # 2. Try edge-tts CLI fallback
     try:
         cmd = [
             "edge-tts",
             "--voice", voice_name,
-            "--rate", "+4%",
+            "--rate", "+10%",
             "--text", script_text,
             "--write-media", out_audio_path,
         ]
         res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
         if res.returncode == 0 and os.path.exists(out_audio_path) and os.path.getsize(out_audio_path) > 1000:
             print(f"  Edge-TTS CLI voiceover ({voice_name}) generated: {out_audio_path}")
-            return True
+            return True, []
     except Exception:
         pass
 
-    return False
+    return False, []
+
+
+
 
 
 
@@ -598,8 +632,24 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
     location = (reel_info.get("location") or "India (Hybrid / Remote)").strip()
     exp = (reel_info.get("experience_label") or "0-3 Years Exp").strip()
     package = (reel_info.get("salary_text") or "Competitive CTC").strip()
-    badge_text = (reel_info.get("badge_text") or "HIRING NOW").upper()
     avatar_name = reel_info.get("avatar_name") or ""
+
+    # Categorize company theme / series
+    comp_lower = company.lower()
+    role_lower = role.lower()
+    loc_lower = location.lower()
+    if any(m in comp_lower for m in ["google", "microsoft", "amazon", "apple", "meta", "adobe", "rubrik", "cisco", "oracle"]):
+        series_badge = "TIER-1 MNC HIRING"
+    elif any(r in loc_lower for r in ["remote", "work from home", "anywhere"]):
+        series_badge = "100% REMOTE TECH JOB"
+    elif any(s in package for s in ["20", "25", "30", "35", "40", "45", "50", "55", "60", "LPA"]):
+        series_badge = "HIGH-PAYING TECH DRIVE"
+    else:
+        series_badge = "VERIFIED TECH DRIVE"
+
+    badge_text = series_badge
+
+
 
     # 1. HD gradient backdrop + accent glow
     top_bg = _mix(bg_rgb, (255, 255, 255), 0.07)
@@ -610,6 +660,7 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
 
     # Thin top accent bar
     draw.rectangle((0, 0, CW, 10), fill=accent_rgb)
+
 
     # 2. Presenter / avatar anchored to lower hero stage
     HERO_TOP = 812
@@ -768,15 +819,17 @@ def render_multi_scene_video(
     orig_w, orig_h = content_img.size
     base_scale = min(avail_w / orig_w, avail_h / orig_h)
 
-    def draw_frame(frame: int) -> Image.Image:
+    def draw_frame(frame: int, scene_name: str | None = None, total_f: int | None = None) -> Image.Image:
         img = create_dynamic_background(frame)
         draw = ImageDraw.Draw(img)
-        scene_name = get_scene(frame)
+        scene_name = scene_name or get_scene(frame)
+        active_total_frames = total_f or TOTAL_FRAMES
 
         # 1. Top progress bar
-        progress = int((frame + 1) / TOTAL_FRAMES * inner_w)
+        progress = int((frame + 1) / active_total_frames * inner_w)
         rounded_rect(draw, (margin, 46, W - margin, 54), 4, (40, 48, 64))
         rounded_rect(draw, (margin, 46, margin + progress, 54), 4, COLOR_ACCENT)
+
 
         # 2. Header Bar
         img.paste(face_sm, (margin, 70), face_sm)
@@ -813,7 +866,7 @@ def render_multi_scene_video(
                 y_role += draw.textbbox((0, 0), r_line, font=role_fnt)[3] + 10
 
             rounded_rect(draw, (margin + 32, card_y + 780, W - margin - 32, card_y + 886), 20, (30, 38, 58), outline=COLOR_ACCENT, width=1)
-            draw.text(((W - draw.textbbox((0, 0), "Check 1st pinned comment for direct apply link 👇", font=FONT_BODY)[2]) // 2, card_y + 816), "Check 1st pinned comment for direct apply link 👇", font=FONT_BODY, fill=COLOR_TEXT_WHITE)
+            draw.text(((W - draw.textbbox((0, 0), "Check 1st pinned comment for direct apply link", font=FONT_BODY)[2]) // 2, card_y + 816), "Check 1st pinned comment for direct apply link", font=FONT_BODY, fill=COLOR_TEXT_WHITE)
 
         elif scene_name == "content_card":
             card_surface = Image.new("RGBA", (inner_w, card_h), (20, 25, 38, 245))
@@ -848,39 +901,36 @@ def render_multi_scene_video(
             card_draw.rounded_rectangle((0, 0, inner_w, card_h), radius=32, fill=COLOR_CARD_BG, outline=COLOR_CARD_BORDER, width=2)
             img.paste(card_surface, (margin, card_y), card_surface)
 
-            draw.text((margin + 32, card_y + 26), "OFFICIAL JOB SPECIFICATIONS", font=FONT_MED, fill=COLOR_ACCENT)
+            # Top urgency alert badge
+            rounded_rect(draw, (margin + 24, card_y + 20, W - margin - 24, card_y + 64), 12, (255, 69, 58, 40), outline=(255, 69, 58), width=1)
+            draw.text(((W - draw.textbbox((0, 0), "APPLICATIONS CLOSING SOON - APPLY TODAY", font=FONT_BADGE)[2]) // 2, card_y + 30), "APPLICATIONS CLOSING SOON - APPLY TODAY", font=FONT_BADGE, fill=(255, 100, 90))
 
             specs = [
                 ("Company", company, COLOR_TEXT_WHITE),
                 ("Target Role", role, COLOR_ACCENT),
-                ("Eligibility", f"{exp} • 2024/2025/2026 Batch", (76, 217, 100)),
-                ("Location", location, COLOR_TEXT_WHITE),
-                ("Package", package, (255, 214, 10)),
+                ("Eligibility", f"{exp} - 2024/2025/2026 Batch", (76, 217, 100)),
+                ("Hiring Process", "OA Round -> Technical Interview -> HR", (255, 214, 10)),
+                ("Location & CTC", f"{location} - {package}", COLOR_TEXT_WHITE),
             ]
 
-            y_pos = card_y + 76
+            y_pos = card_y + 80
             for label, val, val_col in specs:
-                val_fnt, val_lines = get_best_fit_font(draw, val, inner_w - 90, 64, start_size=25, min_size=18, bold=True, max_lines=2)
-                row_h = 100 if len(val_lines) <= 1 else 122
+                val_fnt, val_lines = get_best_fit_font(draw, val, inner_w - 90, 64, start_size=23, min_size=17, bold=True, max_lines=2)
+                row_h = 96 if len(val_lines) <= 1 else 116
                 
                 rounded_rect(draw, (margin + 24, y_pos, W - margin - 24, y_pos + row_h), 18, (30, 38, 58))
-                draw.text((margin + 46, y_pos + 14), label.upper(), font=FONT_SMALL, fill=COLOR_TEXT_SUB)
+                draw.text((margin + 46, y_pos + 12), label.upper(), font=FONT_SMALL, fill=COLOR_TEXT_SUB)
                 
-                y_text = y_pos + 44
+                y_text = y_pos + 38
                 for vl in val_lines:
                     draw.text((margin + 46, y_text), vl, font=val_fnt, fill=val_col)
-                    y_text += draw.textbbox((0, 0), vl, font=val_fnt)[3] + 6
+                    y_text += draw.textbbox((0, 0), vl, font=val_fnt)[3] + 4
                     
-                y_pos += row_h + 12
+                y_pos += row_h + 10
 
-            draw.text((margin + 32, y_pos + 4), "KEY SKILLS & TECH STACK:", font=FONT_SMALL, fill=COLOR_TEXT_MUTED)
-            skill_str = " • ".join(skills[:5])
-            rounded_rect(draw, (margin + 24, y_pos + 30, W - margin - 24, y_pos + 86), 16, (20, 26, 40), outline=COLOR_ACCENT, width=1)
-            sk_fnt, sk_lines = get_best_fit_font(draw, skill_str, inner_w - 80, 44, start_size=19, min_size=15, bold=False, max_lines=1)
-            draw.text((margin + 40, y_pos + 48), sk_lines[0], font=sk_fnt, fill=COLOR_ACCENT)
-
+            # Batchmate share & save prompt
             rounded_rect(draw, (margin + 24, card_y + card_h - 96, W - margin - 24, card_y + card_h - 26), 18, (255, 106, 0, 40), outline=COLOR_ACCENT_ORANGE, width=2)
-            draw.text(((W - draw.textbbox((0, 0), "💾 TAP SAVE — Apply from laptop tonight!", font=FONT_BODY)[2]) // 2, card_y + card_h - 70), "💾 TAP SAVE — Apply from laptop tonight!", font=FONT_BODY, fill=COLOR_TEXT_WHITE)
+            draw.text(((W - draw.textbbox((0, 0), "SHARE WITH 2024-2026 BATCHMATES", font=FONT_BODY)[2]) // 2, card_y + card_h - 70), "SHARE WITH 2024-2026 BATCHMATES", font=FONT_BODY, fill=COLOR_TEXT_WHITE)
 
         else:
             card_surface = Image.new("RGBA", (inner_w, card_h), COLOR_CARD_BG)
@@ -889,42 +939,119 @@ def render_multi_scene_video(
             img.paste(card_surface, (margin, card_y), card_surface)
 
             av_x = (W - 172) // 2
-            av_y = card_y + 42
+            av_y = card_y + 36
             img.paste(face_md, (av_x, av_y), face_md)
             draw.ellipse((av_x, av_y, av_x + 172, av_y + 172), outline=COLOR_ACCENT, width=4)
 
-            draw.text(((W - draw.textbbox((0, 0), "HOW TO APPLY", font=FONT_HERO)[2]) // 2, card_y + 242), "HOW TO APPLY", font=FONT_HERO, fill=COLOR_TEXT_WHITE)
+            draw.text(((W - draw.textbbox((0, 0), "DIRECT APPLY LINK", font=FONT_HERO)[2]) // 2, card_y + 224), "DIRECT APPLY LINK", font=FONT_HERO, fill=COLOR_TEXT_WHITE)
 
-            rounded_rect(draw, (margin + 26, card_y + 332, W - margin - 26, card_y + 472), 22, COLOR_ACCENT_ORANGE)
-            draw.text((margin + 52, card_y + 362), "Direct Apply Link Pinned!", font=FONT_TITLE, fill=COLOR_TEXT_WHITE)
-            draw.text((margin + 52, card_y + 418), "Check the 1st pinned comment below 👇", font=FONT_BODY, fill=(255, 240, 230))
+            # High conversion "COMMENT APPLY" CTA Box
+            rounded_rect(draw, (margin + 26, card_y + 296, W - margin - 26, card_y + 446), 22, (20, 36, 60), outline=COLOR_ACCENT, width=2)
+            draw.text(((W - draw.textbbox((0, 0), "Comment 'APPLY' Below", font=FONT_TITLE)[2]) // 2, card_y + 326), "Comment 'APPLY' Below", font=FONT_TITLE, fill=COLOR_ACCENT)
+            draw.text(((W - draw.textbbox((0, 0), "Direct official career link will be sent to your DMs", font=FONT_SMALL)[2]) // 2, card_y + 386), "Direct official career link will be sent to your DMs", font=FONT_SMALL, fill=(240, 245, 255))
 
-            rounded_rect(draw, (margin + 26, card_y + 508, W - margin - 26, card_y + 662), 22, (30, 38, 58))
-            draw.text((margin + 52, card_y + 538), "Save & Share with a Friend ✈️", font=FONT_MED, fill=COLOR_ACCENT)
-            draw.text((margin + 52, card_y + 588), f"Follow {CHANNEL_HANDLE} for daily verified tech drives", font=FONT_BODY, fill=COLOR_TEXT_MUTED)
+            rounded_rect(draw, (margin + 26, card_y + 468, W - margin - 26, card_y + 618), 22, (30, 38, 58))
+            draw.text((margin + 52, card_y + 494), "Direct Link Also in 1st Comment", font=FONT_MED, fill=COLOR_TEXT_WHITE)
+            draw.text((margin + 52, card_y + 544), f"Follow {CHANNEL_HANDLE} for daily verified tech openings", font=FONT_BODY, fill=COLOR_TEXT_MUTED)
 
-            rounded_rect(draw, (margin + 48, card_y + 734, W - margin - 48, card_y + 834), 26, (18, 24, 38), outline=COLOR_ACCENT_ORANGE, width=3)
-            draw.text(((W - draw.textbbox((0, 0), "TAP SAVE NOW 🚀", font=FONT_CTA)[2]) // 2, card_y + 766), "TAP SAVE NOW 🚀", font=FONT_CTA, fill=COLOR_ACCENT_ORANGE)
+            rounded_rect(draw, (margin + 48, card_y + 684, W - margin - 48, card_y + 784), 26, COLOR_ACCENT_ORANGE)
+            draw.text(((W - draw.textbbox((0, 0), "TAP SAVE NOW", font=FONT_CTA)[2]) // 2, card_y + 714), "TAP SAVE NOW", font=FONT_CTA, fill=COLOR_TEXT_WHITE)
 
         draw.text((margin + 10, H - 72), CHANNEL_HANDLE, font=FONT_MED, fill=COLOR_TEXT_WHITE)
         draw.text((margin + 10, H - 38), CHANNEL_FOOTER_NOTE, font=FONT_SMALL, fill=COLOR_TEXT_MUTED)
 
         return img
 
+    def draw_karaoke_subtitles(draw: ImageDraw.ImageDraw, current_time: float, subs: list[dict]) -> None:
+        """Draw small, clean, unobtrusive subtitles that never overflow."""
+        if not subs:
+            return
+        active_sub = None
+        for s in subs:
+            if s["start"] <= current_time <= s["end"] + 0.2:
+                active_sub = s
+                break
+        if not active_sub:
+            return
+
+        text = active_sub["text"].strip()
+        words = text.split()
+        if not words:
+            return
+
+        sub_font = get_font(21, bold=True)
+        seg_dur = max(0.1, active_sub["end"] - active_sub["start"])
+        prog = max(0.0, min(1.0, (current_time - active_sub["start"]) / seg_dur))
+        active_idx = min(len(words) - 1, int(prog * len(words)))
+
+        # Split into short visual lines if sentence is long (max 6 words per line)
+        lines = []
+        cur_line = []
+        for w in words:
+            cur_line.append(w)
+            if len(cur_line) >= 5:
+                lines.append(cur_line)
+                cur_line = []
+        if cur_line:
+            lines.append(cur_line)
+
+        sub_y = H - 150
+        line_h = 32
+        total_sub_h = len(lines) * line_h + 16
+
+        # Draw dark compact backdrop
+        max_line_w = max(draw.textbbox((0, 0), " ".join(l), font=sub_font)[2] for l in lines)
+        pill_w = min(W - 60, max_line_w + 36)
+        pill_x = (W - pill_w) // 2
+        rounded_rect(draw, (pill_x, sub_y, pill_x + pill_w, sub_y + total_sub_h), 14, (10, 14, 24, 235), outline=(255, 255, 255, 40), width=1)
+
+        w_counter = 0
+        cur_y = sub_y + 8
+        for line_words in lines:
+            line_str = " ".join(line_words)
+            line_w = draw.textbbox((0, 0), line_str, font=sub_font)[2]
+            start_x = (W - line_w) // 2
+            x_ptr = start_x
+            for w in line_words:
+                w_w = draw.textbbox((0, 0), w, font=sub_font)[2]
+                if w_counter == active_idx:
+                    draw.text((x_ptr, cur_y), w, font=sub_font, fill=(255, 225, 0))
+                else:
+                    draw.text((x_ptr, cur_y), w, font=sub_font, fill=(255, 255, 255))
+                x_ptr += w_w + 6
+                w_counter += 1
+            cur_y += line_h
 
     with tempfile.TemporaryDirectory(prefix="runner_multi_reel_") as tmp:
         frame_dir = Path(tmp)
-        for i in range(TOTAL_FRAMES):
-            f_img = draw_frame(i)
-            f_img.save(frame_dir / f"frame_{i:04d}.png", "PNG")
-
         voice_audio = frame_dir / "voiceover.mp3"
-        has_voice = generate_voiceover(reel_info, str(voice_audio))
-        if has_voice and voice_audio.exists():
-            v_sz = voice_audio.stat().st_size
-            print(f"  [AUDIO LOG] Voiceover generated successfully: {voice_audio} ({v_sz} bytes)")
-        else:
-            print("  [AUDIO LOG] Warning: Voiceover generation returned False or file empty.")
+        has_voice, subtitle_cues = generate_voiceover(reel_info, str(voice_audio))
+        
+        # Compute exact audio length and add +2.0 seconds of post-speech buffer
+        audio_dur = 16.0
+        if subtitle_cues:
+            audio_dur = max(c["end"] for c in subtitle_cues)
+        video_seconds = round(min(22.0, max(12.0, audio_dur + 2.0)), 1)
+        total_frames = int(video_seconds * FPS)
+        print(f"  [TIMING LOG] Audio speech duration: {audio_dur:.2f}s -> Video total length: {video_seconds}s ({total_frames} frames)")
+
+        for i in range(total_frames):
+            cur_sec = i / FPS
+            # Dynamic scene switching relative to actual video duration
+            rel_t = cur_sec / video_seconds
+            if rel_t < 0.22:
+                scene_name = "intro_hook"
+            elif rel_t < 0.48:
+                scene_name = "content_card"
+            elif rel_t < 0.78:
+                scene_name = "role_details"
+            else:
+                scene_name = "cta_action"
+
+            f_img = draw_frame(i, scene_name=scene_name, total_f=total_frames)
+            f_draw = ImageDraw.Draw(f_img)
+            draw_karaoke_subtitles(f_draw, cur_sec, subtitle_cues)
+            f_img.save(frame_dir / f"frame_{i:04d}.png", "PNG")
 
         tmp_out = frame_dir / "out.mp4"
         if has_voice and voice_audio.exists() and voice_audio.stat().st_size > 500:
@@ -940,16 +1067,17 @@ def render_multi_scene_video(
                 "-preset", "veryfast",
                 "-crf", "22",
                 "-pix_fmt", "yuv420p",
-                "-filter:a", f"volume=2.8,loudnorm=I=-14:TP=-1.5:LRA=11,apad,atrim=0:{REEL_SECONDS}",
+                "-filter:a", f"volume=2.8,loudnorm=I=-14:TP=-1.5:LRA=11,apad,atrim=0:{video_seconds}",
                 "-c:a", "aac",
                 "-b:a", "192k",
                 "-ar", "48000",
                 "-ac", "2",
-                "-t", str(REEL_SECONDS),
+                "-t", str(video_seconds),
                 "-r", str(FPS),
                 "-movflags", "+faststart",
                 str(tmp_out),
             ]
+
 
         else:
             print("  [AUDIO LOG] Using synthesized silent audio track fallback.")
