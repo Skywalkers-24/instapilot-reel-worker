@@ -1,6 +1,10 @@
-*.mp4
-*.jpg
-*.png
 __pycache__/
 *.pyc
 .env
+/temp/
+/tmp/
+/scratch/
+out.mp4
+reel-*.mp4
+content.jpg
+avatar.jpg

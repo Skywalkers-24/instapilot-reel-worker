@@ -4,15 +4,17 @@ InstaPilot Reel Worker (GitHub Actions).
 
 Upgraded Multi-Scene Engine:
 1. Asks backend for next reel with job details.
-2. Downloads content card & avatar face logo.
-3. Renders 20-second dynamic multi-scene video (Hook -> Content Card -> Spaced Details -> CTA).
-4. Uploads to GitHub Releases and publishes live to Instagram via Graph API.
+2. Uses local avatar assets and local curated face logos directly (no network dependency).
+3. Downloads the designed content card.
+4. Renders 20-second dynamic multi-scene video (Hook -> Content Card -> Spaced Details -> CTA).
+5. Uploads to GitHub Releases and publishes live to Instagram via Graph API.
 """
 from __future__ import annotations
 
 import json
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -254,26 +256,64 @@ def get_scene(frame: int) -> str:
     return "cta_action"
 
 
-def resolve_local_face_logo(avatar_name: str) -> Image.Image:
+def resolve_local_face_logo(avatar_name: str | None) -> Image.Image:
+    """Resolve face logo directly from local worker/face_logos/ directory."""
     logos_dir = Path("face_logos")
     if logos_dir.exists():
-        stem = Path(avatar_name).stem.replace("avatar_", "").replace("face_", "")
-        for f in logos_dir.glob("*.png"):
-            if stem and stem in f.stem:
-                try:
-                    return Image.open(f).convert("RGBA")
-                except Exception:
-                    pass
-        first = sorted(logos_dir.glob("*.png"))
-        if first:
+        if avatar_name:
+            name_clean = Path(avatar_name).stem.lower().replace("avatar_", "").replace("face_", "")
+            match = re.search(r"av(\d+)", name_clean)
+            num_str = match.group(1) if match else None
+            
+            # 1. Exact match by number (final_face_avXX_*.png)
+            if num_str:
+                target_prefix = f"final_face_av{int(num_str):02d}_"
+                for f in logos_dir.glob("final_face_*.png"):
+                    if f.stem.lower().startswith(target_prefix):
+                        try:
+                            return Image.open(f).convert("RGBA")
+                        except Exception:
+                            pass
+
+            # 2. Match by clean slug
+            for f in logos_dir.glob("final_face_*.png"):
+                f_clean = f.stem.lower().replace("final_face_", "")
+                if name_clean in f_clean or f_clean in name_clean:
+                    try:
+                        return Image.open(f).convert("RGBA")
+                    except Exception:
+                        pass
+
+        # 3. Fallback to first available final face logo
+        all_final = sorted(logos_dir.glob("final_face_*.png"))
+        if all_final:
             try:
-                return Image.open(first[0]).convert("RGBA")
+                return Image.open(all_final[0]).convert("RGBA")
             except Exception:
                 pass
+
+    # Safety circle fallback
     circle = Image.new("RGBA", (200, 200), (0, 0, 0, 0))
     d = ImageDraw.Draw(circle)
     d.ellipse((0, 0, 200, 200), fill=(0, 217, 255, 200))
     return circle
+
+
+def resolve_local_avatar_file(avatar_name: str | None) -> Path | None:
+    """Resolve full avatar image directly from worker/avatars/ directory."""
+    avatars_dir = Path("avatars")
+    if not avatars_dir.exists():
+        return None
+    if avatar_name:
+        p = avatars_dir / avatar_name
+        if p.exists():
+            return p
+        stem = Path(avatar_name).stem.lower().replace("avatar_", "")
+        for f in avatars_dir.glob("avatar_*"):
+            if stem in f.stem.lower():
+                return f
+    all_av = sorted(avatars_dir.glob("avatar_*"))
+    return all_av[0] if all_av else None
 
 
 def render_multi_scene_video(
@@ -542,11 +582,9 @@ def main() -> int:
     if not content_url or not download(content_url, "content.jpg"):
         print("Content frame download failed — cannot render.")
         return 1
-    have_cover = bool(avatar_url) and download(avatar_url, "avatar.jpg")
-    print(f"Downloaded (content=yes, avatar_cover={'yes' if have_cover else 'no'}).")
 
     out = f"reel-{reel_id}.mp4"
-    print("Rendering upgraded 20-second multi-scene dynamic reel...")
+    print("Rendering upgraded 20-second multi-scene dynamic reel with local face logo...")
     render_multi_scene_video(reel, "content.jpg", out)
     size = os.path.getsize(out)
     print(f"Rendered {out} ({size} bytes)")
@@ -555,7 +593,7 @@ def main() -> int:
     asset_name = f"reel-{reel_id}-{int(time.time())}.mp4"
     video_url = upload_asset(release_id, out, asset_name)
     print(f"Uploaded: {video_url}")
-    cover_public_url = avatar_url if have_cover else ""
+    cover_public_url = avatar_url or ""
 
     prune_assets(release_id, KEEP_ASSETS)
 
