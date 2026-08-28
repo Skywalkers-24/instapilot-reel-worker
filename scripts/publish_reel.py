@@ -799,28 +799,38 @@ def render_multi_scene_video(
 
         voice_audio = frame_dir / "voiceover.mp3"
         has_voice = generate_voiceover(reel_info, str(voice_audio))
+        if has_voice and voice_audio.exists():
+            v_sz = voice_audio.stat().st_size
+            print(f"  [AUDIO LOG] Voiceover generated successfully: {voice_audio} ({v_sz} bytes)")
+        else:
+            print("  [AUDIO LOG] Warning: Voiceover generation returned False or file empty.")
 
         tmp_out = frame_dir / "out.mp4"
-        if has_voice:
+        if has_voice and voice_audio.exists() and voice_audio.stat().st_size > 500:
             cmd = [
                 ffmpeg_bin,
                 "-y",
                 "-framerate", str(FPS),
                 "-i", str(frame_dir / "frame_%04d.png"),
                 "-i", str(voice_audio),
+                "-map", "0:v:0",
+                "-map", "1:a:0",
                 "-c:v", "libx264",
                 "-preset", "veryfast",
                 "-crf", "22",
                 "-pix_fmt", "yuv420p",
-                "-af", f"apad,atrim=0:{REEL_SECONDS}",
+                "-filter:a", f"apad,atrim=0:{REEL_SECONDS}",
                 "-c:a", "aac",
-                "-b:a", "128k",
+                "-b:a", "192k",
+                "-ar", "48000",
+                "-ac", "2",
                 "-t", str(REEL_SECONDS),
                 "-r", str(FPS),
                 "-movflags", "+faststart",
                 str(tmp_out),
             ]
         else:
+            print("  [AUDIO LOG] Using synthesized silent audio track fallback.")
             cmd = [
                 ffmpeg_bin,
                 "-y",
@@ -828,17 +838,28 @@ def render_multi_scene_video(
                 "-i", str(frame_dir / "frame_%04d.png"),
                 "-f", "lavfi",
                 "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
+                "-map", "0:v:0",
+                "-map", "1:a:0",
                 "-c:v", "libx264",
                 "-preset", "veryfast",
                 "-crf", "22",
                 "-pix_fmt", "yuv420p",
+                "-c:a", "aac",
+                "-b:a", "128k",
                 "-t", str(REEL_SECONDS),
                 "-r", str(FPS),
                 "-movflags", "+faststart",
                 str(tmp_out),
             ]
-        subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print(f"  [FFMPEG LOG] Running FFmpeg command: {' '.join(cmd)}")
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        if res.returncode != 0:
+            print(f"  [FFMPEG ERROR] Code {res.returncode}: {res.stderr[-500:]}")
+            raise RuntimeError(f"FFmpeg failed: {res.stderr}")
         shutil.copyfile(tmp_out, out_path)
+        out_sz = os.path.getsize(out_path)
+        print(f"  [FFMPEG SUCCESS] Rendered MP4 output: {out_path} ({out_sz} bytes)")
+
 
 
 
