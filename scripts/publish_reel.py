@@ -339,21 +339,26 @@ def get_theme_palette(reel_id: int | None) -> dict:
 
 
 
-def resolve_local_avatar_file(avatar_name: str | None) -> Path | None:
-    """Resolve full avatar image directly from worker/avatars/ directory."""
+def resolve_local_avatar_file(avatar_name: str | None, reel_id: int | None = None) -> Path | None:
+    """Resolve full avatar image directly from worker/avatars/ directory with dynamic rotation."""
     avatars_dir = Path("avatars")
     if not avatars_dir.exists():
         return None
+    all_av = sorted(avatars_dir.glob("avatar_*"))
     if avatar_name:
         p = avatars_dir / avatar_name
         if p.exists():
             return p
         stem = Path(avatar_name).stem.lower().replace("avatar_", "")
-        for f in avatars_dir.glob("avatar_*"):
+        for f in all_av:
             if stem in f.stem.lower():
                 return f
-    all_av = sorted(avatars_dir.glob("avatar_*"))
-    return all_av[0] if all_av else None
+
+    if all_av:
+        idx = (int(reel_id or 0) % len(all_av)) if reel_id else 0
+        return all_av[idx]
+    return None
+
 
 
 def clean_spoken_text(text: str) -> str:
@@ -468,40 +473,42 @@ def get_ffmpeg_exe() -> str:
 
 
 def generate_local_content_cover(reel_info: dict) -> Image.Image:
-    """Generate the 1080x1920 job content card 100% locally on worker with rotating aesthetics."""
+    """Generate the exact 1080x1920 job cover template with full-bleed lower avatar and rich card layout."""
     CW, CH = 1080, 1920
     reel_id = reel_info.get("reel_id")
     palette = get_theme_palette(reel_id)
 
-    img = Image.new("RGB", (CW, CH), palette["bg_top"])
+    bg_top = palette["bg_top"]
+    bg_bot = palette["bg_bot"]
+    accent = palette["accent"]
+    accent_sub = palette["accent_sub"]
+
+    img = Image.new("RGB", (CW, CH), bg_bot)
     draw = ImageDraw.Draw(img)
 
-    company = reel_info.get("company") or "Top Tech Company"
-    role = reel_info.get("role") or reel_info.get("title") or "Software Engineer"
-    location = reel_info.get("location") or "India (Hybrid / Remote)"
-    exp = reel_info.get("experience_label") or "0-3 Years Exp"
-    package = reel_info.get("salary_text") or "Competitive CTC"
-    skills = reel_info.get("skills") or ["Full Stack", "Problem Solving", "System Design", "Engineering"]
-    badge_text = (reel_info.get("badge_text") or "OFFICIAL HIRING ALERT").upper()
+    company = (reel_info.get("company") or "Top Tech Company").strip()
+    role = (reel_info.get("role") or reel_info.get("title") or "Software Engineer").strip()
+    location = (reel_info.get("location") or "India (Hybrid / Remote)").strip()
+    exp = (reel_info.get("experience_label") or "0-3 Years Exp").strip()
+    package = (reel_info.get("salary_text") or "Competitive CTC").strip()
+    badge_text = (reel_info.get("badge_text") or "HIRING NOW").upper()
     avatar_name = reel_info.get("avatar_name") or ""
 
-    # Gradient background using theme palette
-    top_c = palette["bg_top"]
-    bot_c = palette["bg_bot"]
+    # 1. Smooth gradient background
     for y in range(0, CH, 16):
         yr = y / CH
         color = (
-            int(top_c[0] + (bot_c[0] - top_c[0]) * yr),
-            int(top_c[1] + (bot_c[1] - top_c[1]) * yr),
-            int(top_c[2] + (bot_c[2] - top_c[2]) * yr),
+            int(bg_top[0] + (bg_bot[0] - bg_top[0]) * yr),
+            int(bg_top[1] + (bg_bot[1] - bg_top[1]) * yr),
+            int(bg_top[2] + (bg_bot[2] - bg_top[2]) * yr),
         )
         draw.rectangle((0, y, CW, y + 16), fill=color)
 
-    # Glow blob using theme palette
+    # 2. Glowing ambient mesh
     glow = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
     gd = ImageDraw.Draw(glow)
-    gd.ellipse((CW // 2 - 350, 300, CW // 2 + 350, 1000), fill=palette["glow1"])
-    gd.ellipse((CW // 2 - 300, 900, CW // 2 + 300, 1500), fill=palette["glow2"])
+    gd.ellipse((CW // 2 - 400, 700, CW // 2 + 400, 1500), fill=palette["glow1"])
+    gd.ellipse((CW // 2 - 300, 1200, CW // 2 + 300, 1800), fill=palette["glow2"])
     blurred_glow = glow.filter(ImageFilter.GaussianBlur(64))
     img = Image.alpha_composite(img.convert("RGBA"), blurred_glow).convert("RGB")
     draw = ImageDraw.Draw(img)
@@ -509,83 +516,92 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
     margin_x = 64
     content_w = CW - margin_x * 2
 
-    # Top channel header
-    face_raw = resolve_local_face_logo(avatar_name, reel_id)
-    face_header = face_raw.resize((100, 100), Image.Resampling.LANCZOS)
-    img.paste(face_header, (margin_x, 80), face_header)
-    draw.text((margin_x + 120, 92), CHANNEL_DISPLAY_NAME, font=FONT_MED, fill=COLOR_TEXT_WHITE)
-    draw.text((margin_x + 120, 136), CHANNEL_TAGLINE, font=FONT_SMALL, fill=COLOR_TEXT_MUTED)
+    # 3. Lower Stage: Full Avatar Illustration
+    HERO_TOP = 840
+    hero_h = CH - HERO_TOP
+    avatar_file = resolve_local_avatar_file(avatar_name, reel_id)
+    if avatar_file and avatar_file.exists():
+        try:
+            av_raw = Image.open(avatar_file).convert("RGB")
+            # Fit avatar photo into lower hero region
+            av_fitted = ImageOps.fit(av_raw, (content_w, hero_h - 40), method=Image.Resampling.LANCZOS, centering=(0.5, 0.25))
+            av_masked = Image.new("RGBA", (content_w, hero_h - 40), (0, 0, 0, 0))
+            av_masked.paste(av_fitted, (0, 0))
+            # Put rounded mask on the avatar
+            mask = Image.new("L", (content_w, hero_h - 40), 0)
+            ImageDraw.Draw(mask).rounded_rectangle((0, 0, content_w - 1, hero_h - 41), radius=28, fill=255)
+            av_masked.putalpha(mask)
+            img.paste(av_masked, (margin_x, HERO_TOP), av_masked)
+        except Exception:
+            pass
 
-    # Main Card Box
-    card_top = 210
-    card_h = 1540
-    card_surface = Image.new("RGBA", (content_w, card_h), palette["card_bg"])
-    card_draw = ImageDraw.Draw(card_surface)
-    card_draw.rounded_rectangle((0, 0, content_w, card_h), radius=36, fill=palette["card_bg"], outline=COLOR_CARD_BORDER, width=2)
-    img.paste(card_surface, (margin_x, card_top), card_surface)
+    # 4. Top Header: Hiring Now pill badge + Company Name + White Logo Box
+    top_y = 70
+    badge_fnt = get_font(22, True)
+    bw = draw.textbbox((0, 0), badge_text, font=badge_fnt)[2] + 44
+    rounded_rect(draw, (margin_x, top_y, margin_x + bw, top_y + 48), 16, accent)
+    draw.text((margin_x + 22, top_y + 12), badge_text, font=badge_fnt, fill=bg_top)
 
-    # Face Logo / Center Hero Badge (Rotating across 90 avatars)
-    face_hero = face_raw.resize((210, 210), Image.Resampling.LANCZOS)
-    fh_x = (CW - 210) // 2
-    fh_y = card_top + 46
-    img.paste(face_hero, (fh_x, fh_y), face_hero)
-    draw.ellipse((fh_x, fh_y, fh_x + 210, fh_y + 210), outline=palette["accent"], width=4)
-
-    # Urgency pill badge
-    fnt_b = FONT_BADGE
-    bw = draw.textbbox((0, 0), badge_text, font=fnt_b)[2] + 48
-    bx = (CW - bw) // 2
-    by = card_top + 280
-    rounded_rect(draw, (bx, by, bx + bw, by + 56), 18, palette["accent_sub"])
-    draw.text(((CW - draw.textbbox((0, 0), badge_text, font=fnt_b)[2]) // 2, by + 12), badge_text, font=fnt_b, fill=COLOR_TEXT_WHITE)
+    # Top right white logo box with face/logo
+    logo_size = 140
+    logo_x = CW - margin_x - logo_size
+    logo_y = top_y - 6
+    rounded_rect(draw, (logo_x, logo_y, logo_x + logo_size, logo_y + logo_size), 26, (255, 255, 255), outline=COLOR_CARD_BORDER, width=2)
+    face_logo = resolve_local_face_logo(avatar_name, reel_id)
+    face_in_box = face_logo.resize((104, 104), Image.Resampling.LANCZOS)
+    img.paste(face_in_box, (logo_x + (logo_size - 104) // 2, logo_y + (logo_size - 104) // 2), face_in_box)
 
     # Company name
-    comp_fnt, comp_lines = get_best_fit_font(draw, company, content_w - 80, 100, start_size=56, min_size=36, bold=True, max_lines=1)
-    comp_tw = draw.textbbox((0, 0), comp_lines[0], font=comp_fnt)[2]
-    draw.text(((CW - comp_tw) // 2, card_top + 356), comp_lines[0], font=comp_fnt, fill=palette["accent"])
+    comp_fnt, comp_lines = get_best_fit_font(draw, company.upper(), content_w - logo_size - 60, 80, start_size=52, min_size=32, bold=True, max_lines=1)
+    draw.text((margin_x, top_y + 72), comp_lines[0], font=comp_fnt, fill=COLOR_TEXT_WHITE)
+    draw.text((margin_x, top_y + 132), "OFFICIAL CAREERS OPENING", font=get_font(20, True), fill=accent)
 
-    # Role Title
-    role_fnt, role_lines = get_best_fit_font(draw, role, content_w - 80, 140, start_size=42, min_size=28, bold=True, max_lines=2)
-    ry = card_top + 438
+    # 5. Role Title
+    title_y = top_y + 184
+    role_fnt, role_lines = get_best_fit_font(draw, role.upper(), content_w, 160, start_size=46, min_size=28, bold=True, max_lines=3)
+    ry = title_y
     for rl in role_lines:
-        rtw = draw.textbbox((0, 0), rl, font=role_fnt)[2]
-        draw.text(((CW - rtw) // 2, ry), rl, font=role_fnt, fill=COLOR_TEXT_WHITE)
+        draw.text((margin_x, ry), rl, font=role_fnt, fill=COLOR_TEXT_WHITE)
         ry += draw.textbbox((0, 0), rl, font=role_fnt)[3] + 10
 
-    # Specs Card Grid
+    # Accent underline
+    rounded_rect(draw, (margin_x, ry + 4, margin_x + 180, ry + 12), 4, accent)
+
+    # 6. Specs Rows with Accent Tabs
+    specs_y = ry + 32
     specs = [
-        ("ELIGIBILITY", f"{exp} • Freshers Eligible", (76, 217, 100)),
-        ("LOCATION", location, COLOR_TEXT_WHITE),
-        ("PACKAGE / CTC", package, (255, 214, 10)),
-        ("APPLY MODE", "Official Company Portal", palette["accent"]),
+        ("EXPERIENCE", exp),
+        ("LOCATION", location),
+        ("PACKAGE", package),
     ]
 
-    specs_y = card_top + 610
-    for label, val, col in specs:
-        rounded_rect(draw, (margin_x + 36, specs_y, CW - margin_x - 36, specs_y + 110), 20, (30, 38, 58))
-        rounded_rect(draw, (margin_x + 36, specs_y, margin_x + 46, specs_y + 110), 6, palette["accent"])
-        draw.text((margin_x + 64, specs_y + 16), label, font=FONT_SMALL, fill=COLOR_TEXT_SUB)
-        vfnt, vlines = get_best_fit_font(draw, val, content_w - 140, 50, start_size=28, min_size=20, bold=True, max_lines=1)
-        draw.text((margin_x + 64, specs_y + 50), vlines[0], font=vfnt, fill=col)
-        specs_y += 126
+    for label, val in specs:
+        rounded_rect(draw, (margin_x, specs_y, margin_x + content_w, specs_y + 86), 18, palette["card_bg"], outline=COLOR_CARD_BORDER, width=1)
+        rounded_rect(draw, (margin_x, specs_y, margin_x + 8, specs_y + 86), 4, accent)
+        draw.text((margin_x + 24, specs_y + 14), label.upper(), font=get_font(17, True), fill=COLOR_TEXT_SUB)
+        vfnt, vlines = get_best_fit_font(draw, val.upper(), content_w - 48, 44, start_size=24, min_size=18, bold=True, max_lines=1)
+        draw.text((margin_x + 24, specs_y + 44), vlines[0], font=vfnt, fill=COLOR_TEXT_WHITE if label != "EXPERIENCE" else accent)
+        specs_y += 98
 
-    # Skills Pill Tags
-    draw.text((margin_x + 44, specs_y + 8), "KEY SKILLS & TECH STACK:", font=FONT_SMALL, fill=COLOR_TEXT_MUTED)
-    skill_text = " • ".join(skills[:5])
-    rounded_rect(draw, (margin_x + 36, specs_y + 40, CW - margin_x - 36, specs_y + 106), 18, (20, 26, 40), outline=palette["accent"], width=1)
-    sfnt, slines = get_best_fit_font(draw, skill_text, content_w - 120, 48, start_size=24, min_size=18, bold=False, max_lines=1)
-    draw.text((margin_x + 56, specs_y + 62), slines[0], font=sfnt, fill=palette["accent"])
+    # 7. Lower Tags above button
+    tag_y = CH - 240
+    tag_str = "FRESHERS / 0-3 YOE • OFFICIAL APPLY LINK • TOP ROLE"
+    rounded_rect(draw, (margin_x + 20, tag_y, CW - margin_x - 20, tag_y + 46), 14, (16, 22, 36, 230), outline=COLOR_CARD_BORDER, width=1)
+    tfnt, tlines = get_best_fit_font(draw, tag_str, content_w - 60, 36, start_size=17, min_size=14, bold=True, max_lines=1)
+    draw.text(((CW - draw.textbbox((0, 0), tlines[0], font=tfnt)[2]) // 2, tag_y + 12), tlines[0], font=tfnt, fill=COLOR_TEXT_WHITE)
 
-    # Bottom Save CTA
-    cta_y = card_top + card_h - 136
-    rounded_rect(draw, (margin_x + 36, cta_y, CW - margin_x - 36, cta_y + 92), 24, palette["accent_sub"])
-    draw.text(((CW - draw.textbbox((0, 0), "💾 TAP SAVE — Direct Link In Pinned Comment 👇", font=FONT_BODY)[2]) // 2, cta_y + 28), "💾 TAP SAVE — Direct Link In Pinned Comment 👇", font=FONT_BODY, fill=COLOR_TEXT_WHITE)
+    # 8. Big Cyan Apply CTA Button
+    btn_y = CH - 175
+    rounded_rect(draw, (margin_x, btn_y, margin_x + content_w, btn_y + 92), 24, accent)
+    cta_str = "APPLY VIA LINK IN BIO →"
+    btn_fnt = get_font(32, True)
+    draw.text(((CW - draw.textbbox((0, 0), cta_str, font=btn_fnt)[2]) // 2, btn_y + 26), cta_str, font=btn_fnt, fill=bg_top)
 
-    # Footer notes
-    draw.text((margin_x + 10, CH - 70), CHANNEL_HANDLE, font=FONT_MED, fill=COLOR_TEXT_WHITE)
-    draw.text((margin_x + 10, CH - 36), CHANNEL_FOOTER_NOTE, font=FONT_SMALL, fill=COLOR_TEXT_MUTED)
+    # 9. Small Disclaimer
+    draw.text((margin_x + 10, CH - 60), "Source: Official Careers Page", font=get_font(15, False), fill=COLOR_TEXT_MUTED)
 
     return img
+
 
 
 
