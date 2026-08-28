@@ -5,7 +5,8 @@ on:
     types: [scrape-jobs]     # fired by Cloudflare cron via backend trigger
   workflow_dispatch:          # manual "Run workflow" button
   schedule:
-    - cron: '0 */12 * * *'    # fallback schedule
+    - cron: '30 */6 * * *'    # runs every 6 hours (00:30, 06:30, 12:30, 18:30 UTC)
+
 
 concurrency:
   group: scrape-jobs
