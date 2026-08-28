@@ -940,7 +940,7 @@ def render_multi_scene_video(
                 "-preset", "veryfast",
                 "-crf", "22",
                 "-pix_fmt", "yuv420p",
-                "-filter:a", f"apad,atrim=0:{REEL_SECONDS}",
+                "-filter:a", f"volume=2.8,loudnorm=I=-14:TP=-1.5:LRA=11,apad,atrim=0:{REEL_SECONDS}",
                 "-c:a", "aac",
                 "-b:a", "192k",
                 "-ar", "48000",
@@ -950,6 +950,7 @@ def render_multi_scene_video(
                 "-movflags", "+faststart",
                 str(tmp_out),
             ]
+
         else:
             print("  [AUDIO LOG] Using synthesized silent audio track fallback.")
             cmd = [
