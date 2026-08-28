@@ -11,9 +11,11 @@ workflow can show a scheduled run much later than expected.
 The `Publish Reel` workflow (`.github/workflows/publish-reel.yml`) has three
 triggers:
 
-- `schedule`: best-effort GitHub backup every 15 minutes
 - `repository_dispatch` type `publish-reel`: the reliable path, fired via API
 - `workflow_dispatch`: the manual "Run workflow" button
+
+GitHub Actions does not run its own cron. Cloudflare owns the schedule, calls
+the backend, and the backend fires `repository_dispatch`.
 
 Each run builds the next reel, renders the MP4, publishes through the backend's
 thin Instagram endpoints, and reports the outcome. The backend cadence gate

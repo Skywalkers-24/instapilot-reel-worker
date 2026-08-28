@@ -1,13 +1,8 @@
 name: Publish Reel
 
 on:
-  schedule:
-    # Best-effort backup only. GitHub's scheduler is throttled/unreliable for
-    # short intervals and often skips ticks. This fires every 15 minutes, offset
-    # away from the busiest :00/:15/:30/:45 minute boundaries.
-    - cron: '7,22,37,52 * * * *'
   repository_dispatch:
-    types: [publish-reel]     # fired by the backend (reliable external cron)
+    types: [publish-reel]     # fired by the backend after Cloudflare cron calls it
   workflow_dispatch:          # manual "Run workflow" button
 
 concurrency:

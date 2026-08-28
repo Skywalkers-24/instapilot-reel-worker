@@ -25,7 +25,6 @@ media bucket or bandwidth bill.
 
 The workflow has three triggers:
 
-- `schedule`: best-effort GitHub backup every 15 minutes, offset away from busy minute boundaries
 - `repository_dispatch`: reliable trigger fired by the backend's `/api/cron/trigger-publish`
 - `workflow_dispatch`: manual "Run workflow" button
 
@@ -48,6 +47,7 @@ Configure these Cloudflare variables:
 
 The Cloudflare Worker calls `POST {BACKEND_URL}/api/cron/trigger-publish`, and
 the backend fires the `repository_dispatch` event for the GitHub Actions worker.
+GitHub Actions does not run its own cron; Cloudflare owns the schedule.
 
 ## Required GitHub Secrets
 
