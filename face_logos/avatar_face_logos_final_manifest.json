@@ -1,0 +1,536 @@
+[
+  {
+    "id": "final_face_av01_anime_portrait",
+    "filename": "final_face_av01_anime_portrait.png",
+    "label": "AV01 Anime Portrait",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av01_anime_portrait.png"
+  },
+  {
+    "id": "final_face_av02_chibi_developer",
+    "filename": "final_face_av02_chibi_developer.png",
+    "label": "AV02 Chibi Developer",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av02_chibi_developer.png"
+  },
+  {
+    "id": "final_face_av03_cool_street",
+    "filename": "final_face_av03_cool_street.png",
+    "label": "AV03 Cool Street",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av03_cool_street.png"
+  },
+  {
+    "id": "final_face_av04_presenter",
+    "filename": "final_face_av04_presenter.png",
+    "label": "AV04 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av04_presenter.png"
+  },
+  {
+    "id": "final_face_av05_presenter",
+    "filename": "final_face_av05_presenter.png",
+    "label": "AV05 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av05_presenter.png"
+  },
+  {
+    "id": "final_face_av06_presenter",
+    "filename": "final_face_av06_presenter.png",
+    "label": "AV06 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av06_presenter.png"
+  },
+  {
+    "id": "final_face_av07_presenter",
+    "filename": "final_face_av07_presenter.png",
+    "label": "AV07 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av07_presenter.png"
+  },
+  {
+    "id": "final_face_av08_tiktok",
+    "filename": "final_face_av08_tiktok.png",
+    "label": "AV08 Tiktok",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av08_tiktok.png"
+  },
+  {
+    "id": "final_face_av09_ver",
+    "filename": "final_face_av09_ver.png",
+    "label": "AV09 Ver",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av09_ver.png"
+  },
+  {
+    "id": "final_face_av10_avatar_sell",
+    "filename": "final_face_av10_avatar_sell.png",
+    "label": "AV10 Avatar Sell",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av10_avatar_sell.png"
+  },
+  {
+    "id": "final_face_av11_duniya",
+    "filename": "final_face_av11_duniya.png",
+    "label": "AV11 Duniya",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av11_duniya.png"
+  },
+  {
+    "id": "final_face_av12_anime_coder",
+    "filename": "final_face_av12_anime_coder.png",
+    "label": "AV12 Anime Coder",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av12_anime_coder.png"
+  },
+  {
+    "id": "final_face_av13_asian",
+    "filename": "final_face_av13_asian.png",
+    "label": "AV13 Asian",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av13_asian.png"
+  },
+  {
+    "id": "final_face_av14_beyond_bookkeeping",
+    "filename": "final_face_av14_beyond_bookkeeping.png",
+    "label": "AV14 Beyond Bookkeeping",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av14_beyond_bookkeeping.png"
+  },
+  {
+    "id": "final_face_av15_celebrate_brand",
+    "filename": "final_face_av15_celebrate_brand.png",
+    "label": "AV15 Celebrate Brand",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av15_celebrate_brand.png"
+  },
+  {
+    "id": "final_face_av16_presenter",
+    "filename": "final_face_av16_presenter.png",
+    "label": "AV16 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av16_presenter.png"
+  },
+  {
+    "id": "final_face_av17_coffee_good",
+    "filename": "final_face_av17_coffee_good.png",
+    "label": "AV17 Coffee Good",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av17_coffee_good.png"
+  },
+  {
+    "id": "final_face_av18_cozy_anime",
+    "filename": "final_face_av18_cozy_anime.png",
+    "label": "AV18 Cozy Anime",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av18_cozy_anime.png"
+  },
+  {
+    "id": "final_face_av19_presenter",
+    "filename": "final_face_av19_presenter.png",
+    "label": "AV19 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av19_presenter.png"
+  },
+  {
+    "id": "final_face_av20_presenter",
+    "filename": "final_face_av20_presenter.png",
+    "label": "AV20 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av20_presenter.png"
+  },
+  {
+    "id": "final_face_av21_presenter",
+    "filename": "final_face_av21_presenter.png",
+    "label": "AV21 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av21_presenter.png"
+  },
+  {
+    "id": "final_face_av22_presenter",
+    "filename": "final_face_av22_presenter.png",
+    "label": "AV22 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av22_presenter.png"
+  },
+  {
+    "id": "final_face_av23_presenter",
+    "filename": "final_face_av23_presenter.png",
+    "label": "AV23 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av23_presenter.png"
+  },
+  {
+    "id": "final_face_av24_presenter",
+    "filename": "final_face_av24_presenter.png",
+    "label": "AV24 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av24_presenter.png"
+  },
+  {
+    "id": "final_face_av25_presenter",
+    "filename": "final_face_av25_presenter.png",
+    "label": "AV25 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av25_presenter.png"
+  },
+  {
+    "id": "final_face_av26_presenter",
+    "filename": "final_face_av26_presenter.png",
+    "label": "AV26 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av26_presenter.png"
+  },
+  {
+    "id": "final_face_av27_presenter",
+    "filename": "final_face_av27_presenter.png",
+    "label": "AV27 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av27_presenter.png"
+  },
+  {
+    "id": "final_face_av28_presenter",
+    "filename": "final_face_av28_presenter.png",
+    "label": "AV28 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av28_presenter.png"
+  },
+  {
+    "id": "final_face_av29_presenter",
+    "filename": "final_face_av29_presenter.png",
+    "label": "AV29 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av29_presenter.png"
+  },
+  {
+    "id": "final_face_av30_focus_aim",
+    "filename": "final_face_av30_focus_aim.png",
+    "label": "AV30 Focus Aim",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av30_focus_aim.png"
+  },
+  {
+    "id": "final_face_av31_follow_wealth",
+    "filename": "final_face_av31_follow_wealth.png",
+    "label": "AV31 Follow Wealth",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av31_follow_wealth.png"
+  },
+  {
+    "id": "final_face_av32_avatar_girls",
+    "filename": "final_face_av32_avatar_girls.png",
+    "label": "AV32 Avatar Girls",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av32_avatar_girls.png"
+  },
+  {
+    "id": "final_face_av33_founder_insights",
+    "filename": "final_face_av33_founder_insights.png",
+    "label": "AV33 Founder Insights",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av33_founder_insights.png"
+  },
+  {
+    "id": "final_face_av34_freelance_digital",
+    "filename": "final_face_av34_freelance_digital.png",
+    "label": "AV34 Freelance Digital",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av34_freelance_digital.png"
+  },
+  {
+    "id": "final_face_av35_how_create",
+    "filename": "final_face_av35_how_create.png",
+    "label": "AV35 How Create",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av35_how_create.png"
+  },
+  {
+    "id": "final_face_av36_fluffy",
+    "filename": "final_face_av36_fluffy.png",
+    "label": "AV36 Fluffy",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av36_fluffy.png"
+  },
+  {
+    "id": "final_face_av37_motivational_workspace",
+    "filename": "final_face_av37_motivational_workspace.png",
+    "label": "AV37 Motivational Workspace",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av37_motivational_workspace.png"
+  },
+  {
+    "id": "final_face_av38_productive_soft",
+    "filename": "final_face_av38_productive_soft.png",
+    "label": "AV38 Productive Soft",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av38_productive_soft.png"
+  },
+  {
+    "id": "final_face_av39_smiling_businesswoman",
+    "filename": "final_face_av39_smiling_businesswoman.png",
+    "label": "AV39 Smiling Businesswoman",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av39_smiling_businesswoman.png"
+  },
+  {
+    "id": "final_face_av40_late_night",
+    "filename": "final_face_av40_late_night.png",
+    "label": "AV40 Late Night",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av40_late_night.png"
+  },
+  {
+    "id": "final_face_av41_turn_notes",
+    "filename": "final_face_av41_turn_notes.png",
+    "label": "AV41 Turn Notes",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av41_turn_notes.png"
+  },
+  {
+    "id": "final_face_av42_what_social",
+    "filename": "final_face_av42_what_social.png",
+    "label": "AV42 What Social",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av42_what_social.png"
+  },
+  {
+    "id": "final_face_av43_write",
+    "filename": "final_face_av43_write.png",
+    "label": "AV43 Write",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av43_write.png"
+  },
+  {
+    "id": "final_face_av44_dream_big",
+    "filename": "final_face_av44_dream_big.png",
+    "label": "AV44 Dream Big",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av44_dream_big.png"
+  },
+  {
+    "id": "final_face_av45_presenter",
+    "filename": "final_face_av45_presenter.png",
+    "label": "AV45 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av45_presenter.png"
+  },
+  {
+    "id": "final_face_av46_presenter",
+    "filename": "final_face_av46_presenter.png",
+    "label": "AV46 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av46_presenter.png"
+  },
+  {
+    "id": "final_face_av47_que_muchas",
+    "filename": "final_face_av47_que_muchas.png",
+    "label": "AV47 Que Muchas",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av47_que_muchas.png"
+  },
+  {
+    "id": "final_face_av48_code_fire",
+    "filename": "final_face_av48_code_fire.png",
+    "label": "AV48 Code Fire",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av48_code_fire.png"
+  },
+  {
+    "id": "final_face_av49_presenter",
+    "filename": "final_face_av49_presenter.png",
+    "label": "AV49 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av49_presenter.png"
+  },
+  {
+    "id": "final_face_av50_hoodie_gamer",
+    "filename": "final_face_av50_hoodie_gamer.png",
+    "label": "AV50 Hoodie Gamer",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av50_hoodie_gamer.png"
+  },
+  {
+    "id": "final_face_av51_pink_art",
+    "filename": "final_face_av51_pink_art.png",
+    "label": "AV51 Pink Art",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av51_pink_art.png"
+  },
+  {
+    "id": "final_face_av52_presenter",
+    "filename": "final_face_av52_presenter.png",
+    "label": "AV52 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av52_presenter.png"
+  },
+  {
+    "id": "final_face_av53_another_world",
+    "filename": "final_face_av53_another_world.png",
+    "label": "AV53 Another World",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av53_another_world.png"
+  },
+  {
+    "id": "final_face_av54_baz_nler",
+    "filename": "final_face_av54_baz_nler.png",
+    "label": "AV54 Baz Nler",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av54_baz_nler.png"
+  },
+  {
+    "id": "final_face_av55_cute",
+    "filename": "final_face_av55_cute.png",
+    "label": "AV55 Cute",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av55_cute.png"
+  },
+  {
+    "id": "final_face_av56_presenter",
+    "filename": "final_face_av56_presenter.png",
+    "label": "AV56 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av56_presenter.png"
+  },
+  {
+    "id": "final_face_av57_presenter",
+    "filename": "final_face_av57_presenter.png",
+    "label": "AV57 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av57_presenter.png"
+  },
+  {
+    "id": "final_face_av58_presenter",
+    "filename": "final_face_av58_presenter.png",
+    "label": "AV58 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av58_presenter.png"
+  },
+  {
+    "id": "final_face_av59_presenter",
+    "filename": "final_face_av59_presenter.png",
+    "label": "AV59 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av59_presenter.png"
+  },
+  {
+    "id": "final_face_av60_presenter",
+    "filename": "final_face_av60_presenter.png",
+    "label": "AV60 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av60_presenter.png"
+  },
+  {
+    "id": "final_face_av61_presenter",
+    "filename": "final_face_av61_presenter.png",
+    "label": "AV61 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av61_presenter.png"
+  },
+  {
+    "id": "final_face_av62_presenter",
+    "filename": "final_face_av62_presenter.png",
+    "label": "AV62 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av62_presenter.png"
+  },
+  {
+    "id": "final_face_av63_presenter",
+    "filename": "final_face_av63_presenter.png",
+    "label": "AV63 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av63_presenter.png"
+  },
+  {
+    "id": "final_face_av64_presenter",
+    "filename": "final_face_av64_presenter.png",
+    "label": "AV64 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av64_presenter.png"
+  },
+  {
+    "id": "final_face_av65_presenter",
+    "filename": "final_face_av65_presenter.png",
+    "label": "AV65 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av65_presenter.png"
+  },
+  {
+    "id": "final_face_av66_presenter",
+    "filename": "final_face_av66_presenter.png",
+    "label": "AV66 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av66_presenter.png"
+  },
+  {
+    "id": "final_face_av67_presenter",
+    "filename": "final_face_av67_presenter.png",
+    "label": "AV67 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av67_presenter.png"
+  },
+  {
+    "id": "final_face_av68_presenter",
+    "filename": "final_face_av68_presenter.png",
+    "label": "AV68 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av68_presenter.png"
+  },
+  {
+    "id": "final_face_av69_presenter",
+    "filename": "final_face_av69_presenter.png",
+    "label": "AV69 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av69_presenter.png"
+  },
+  {
+    "id": "final_face_av70_presenter",
+    "filename": "final_face_av70_presenter.png",
+    "label": "AV70 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av70_presenter.png"
+  },
+  {
+    "id": "final_face_av71_exam_time",
+    "filename": "final_face_av71_exam_time.png",
+    "label": "AV71 Exam Time",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av71_exam_time.png"
+  },
+  {
+    "id": "final_face_av72_follow_more",
+    "filename": "final_face_av72_follow_more.png",
+    "label": "AV72 Follow More",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av72_follow_more.png"
+  },
+  {
+    "id": "final_face_av73_presenter",
+    "filename": "final_face_av73_presenter.png",
+    "label": "AV73 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av73_presenter.png"
+  },
+  {
+    "id": "final_face_av74_listening_music",
+    "filename": "final_face_av74_listening_music.png",
+    "label": "AV74 Listening Music",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av74_listening_music.png"
+  },
+  {
+    "id": "final_face_av75_personality",
+    "filename": "final_face_av75_personality.png",
+    "label": "AV75 Personality",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av75_personality.png"
+  },
+  {
+    "id": "final_face_av76_pov_found",
+    "filename": "final_face_av76_pov_found.png",
+    "label": "AV76 Pov Found",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av76_pov_found.png"
+  },
+  {
+    "id": "final_face_av77_programmer",
+    "filename": "final_face_av77_programmer.png",
+    "label": "AV77 Programmer",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av77_programmer.png"
+  },
+  {
+    "id": "final_face_av78_save_this",
+    "filename": "final_face_av78_save_this.png",
+    "label": "AV78 Save This",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av78_save_this.png"
+  },
+  {
+    "id": "final_face_av79_smart_boy",
+    "filename": "final_face_av79_smart_boy.png",
+    "label": "AV79 Smart Boy",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av79_smart_boy.png"
+  },
+  {
+    "id": "final_face_av80_ultimate_dual",
+    "filename": "final_face_av80_ultimate_dual.png",
+    "label": "AV80 Ultimate Dual",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av80_ultimate_dual.png"
+  },
+  {
+    "id": "final_face_av81_time_work",
+    "filename": "final_face_av81_time_work.png",
+    "label": "AV81 Time Work",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av81_time_work.png"
+  },
+  {
+    "id": "final_face_av82_visualize_future",
+    "filename": "final_face_av82_visualize_future.png",
+    "label": "AV82 Visualize Future",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av82_visualize_future.png"
+  },
+  {
+    "id": "final_face_av83_working_hard",
+    "filename": "final_face_av83_working_hard.png",
+    "label": "AV83 Working Hard",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av83_working_hard.png"
+  },
+  {
+    "id": "final_face_av84_working_women",
+    "filename": "final_face_av84_working_women.png",
+    "label": "AV84 Working Women",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av84_working_women.png"
+  },
+  {
+    "id": "final_face_av85_presenter",
+    "filename": "final_face_av85_presenter.png",
+    "label": "AV85 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av85_presenter.png"
+  },
+  {
+    "id": "final_face_av86_presenter",
+    "filename": "final_face_av86_presenter.png",
+    "label": "AV86 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av86_presenter.png"
+  },
+  {
+    "id": "final_face_av87_presenter",
+    "filename": "final_face_av87_presenter.png",
+    "label": "AV87 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av87_presenter.png"
+  },
+  {
+    "id": "final_face_av88_presenter",
+    "filename": "final_face_av88_presenter.png",
+    "label": "AV88 Presenter",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av88_presenter.png"
+  },
+  {
+    "id": "final_face_av89_digital",
+    "filename": "final_face_av89_digital.png",
+    "label": "AV89 Digital",
+    "face_logo_url": "/avatar_face_logos_final/final_face_av89_digital.png"
+  }
+]

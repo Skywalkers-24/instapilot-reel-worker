@@ -1,0 +1,986 @@
+[
+  {
+    "id": "avatar_av01_aesthetic_portrait",
+    "filename": "avatar_av01_aesthetic_portrait.jpg",
+    "label": "AV01 Aesthetic Portrait",
+    "face_logo": "face_avatar_av01_aesthetic_portrait.png",
+    "avatar_url": "/avatars/avatar_av01_aesthetic_portrait.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av01_aesthetic_portrait.png"
+  },
+  {
+    "id": "avatar_av02_anime_portrait",
+    "filename": "avatar_av02_anime_portrait.png",
+    "label": "AV02 Anime Portrait",
+    "face_logo": "face_avatar_av02_anime_portrait.png",
+    "avatar_url": "/avatars/avatar_av02_anime_portrait.png",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av02_anime_portrait.png"
+  },
+  {
+    "id": "avatar_av03_anime_portrait",
+    "filename": "avatar_av03_anime_portrait.png",
+    "label": "AV03 Anime Portrait",
+    "face_logo": "face_avatar_av03_anime_portrait.png",
+    "avatar_url": "/avatars/avatar_av03_anime_portrait.png",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av03_anime_portrait.png"
+  },
+  {
+    "id": "avatar_av04_chibi_developer",
+    "filename": "avatar_av04_chibi_developer.jpg",
+    "label": "AV04 Chibi Developer",
+    "face_logo": "face_avatar_av04_chibi_developer.png",
+    "avatar_url": "/avatars/avatar_av04_chibi_developer.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av04_chibi_developer.png"
+  },
+  {
+    "id": "avatar_av05_cool_street",
+    "filename": "avatar_av05_cool_street.png",
+    "label": "AV05 Cool Street",
+    "face_logo": "face_avatar_av05_cool_street.png",
+    "avatar_url": "/avatars/avatar_av05_cool_street.png",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av05_cool_street.png"
+  },
+  {
+    "id": "avatar_av06_presenter",
+    "filename": "avatar_av06_presenter.jpg",
+    "label": "AV06 Presenter",
+    "face_logo": "face_avatar_av06_presenter.png",
+    "avatar_url": "/avatars/avatar_av06_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av06_presenter.png"
+  },
+  {
+    "id": "avatar_av07_presenter",
+    "filename": "avatar_av07_presenter.jpg",
+    "label": "AV07 Presenter",
+    "face_logo": "face_avatar_av07_presenter.png",
+    "avatar_url": "/avatars/avatar_av07_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av07_presenter.png"
+  },
+  {
+    "id": "avatar_av08_presenter",
+    "filename": "avatar_av08_presenter.jpg",
+    "label": "AV08 Presenter",
+    "face_logo": "face_avatar_av08_presenter.png",
+    "avatar_url": "/avatars/avatar_av08_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av08_presenter.png"
+  },
+  {
+    "id": "avatar_av09_presenter",
+    "filename": "avatar_av09_presenter.jpg",
+    "label": "AV09 Presenter",
+    "face_logo": "face_avatar_av09_presenter.png",
+    "avatar_url": "/avatars/avatar_av09_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av09_presenter.png"
+  },
+  {
+    "id": "avatar_av10_presenter",
+    "filename": "avatar_av10_presenter.jpg",
+    "label": "AV10 Presenter",
+    "face_logo": "face_avatar_av10_presenter.png",
+    "avatar_url": "/avatars/avatar_av10_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av10_presenter.png"
+  },
+  {
+    "id": "avatar_av11_presenter",
+    "filename": "avatar_av11_presenter.jpg",
+    "label": "AV11 Presenter",
+    "face_logo": "face_avatar_av11_presenter.png",
+    "avatar_url": "/avatars/avatar_av11_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av11_presenter.png"
+  },
+  {
+    "id": "avatar_av12_presenter",
+    "filename": "avatar_av12_presenter.jpg",
+    "label": "AV12 Presenter",
+    "face_logo": "face_avatar_av12_presenter.png",
+    "avatar_url": "/avatars/avatar_av12_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av12_presenter.png"
+  },
+  {
+    "id": "avatar_av13_presenter",
+    "filename": "avatar_av13_presenter.jpg",
+    "label": "AV13 Presenter",
+    "face_logo": "face_avatar_av13_presenter.png",
+    "avatar_url": "/avatars/avatar_av13_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av13_presenter.png"
+  },
+  {
+    "id": "avatar_av14_focus_aim",
+    "filename": "avatar_av14_focus_aim.jpg",
+    "label": "AV14 Focus Aim",
+    "face_logo": "face_avatar_av14_focus_aim.png",
+    "avatar_url": "/avatars/avatar_av14_focus_aim.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av14_focus_aim.png"
+  },
+  {
+    "id": "avatar_av15_follow_wealth",
+    "filename": "avatar_av15_follow_wealth.jpg",
+    "label": "AV15 Follow Wealth",
+    "face_logo": "face_avatar_av15_follow_wealth.png",
+    "avatar_url": "/avatars/avatar_av15_follow_wealth.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av15_follow_wealth.png"
+  },
+  {
+    "id": "avatar_av16_avatar_girls",
+    "filename": "avatar_av16_avatar_girls.jpg",
+    "label": "AV16 Avatar Girls",
+    "face_logo": "face_avatar_av16_avatar_girls.png",
+    "avatar_url": "/avatars/avatar_av16_avatar_girls.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av16_avatar_girls.png"
+  },
+  {
+    "id": "avatar_av17_founder_insights",
+    "filename": "avatar_av17_founder_insights.jpg",
+    "label": "AV17 Founder Insights",
+    "face_logo": "face_avatar_av17_founder_insights.png",
+    "avatar_url": "/avatars/avatar_av17_founder_insights.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av17_founder_insights.png"
+  },
+  {
+    "id": "avatar_av18_freelance_digital",
+    "filename": "avatar_av18_freelance_digital.jpg",
+    "label": "AV18 Freelance Digital",
+    "face_logo": "face_avatar_av18_freelance_digital.png",
+    "avatar_url": "/avatars/avatar_av18_freelance_digital.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av18_freelance_digital.png"
+  },
+  {
+    "id": "avatar_av19_how_create",
+    "filename": "avatar_av19_how_create.jpg",
+    "label": "AV19 How Create",
+    "face_logo": "face_avatar_av19_how_create.png",
+    "avatar_url": "/avatars/avatar_av19_how_create.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av19_how_create.png"
+  },
+  {
+    "id": "avatar_av20_fluffy",
+    "filename": "avatar_av20_fluffy.jpg",
+    "label": "AV20 Fluffy",
+    "face_logo": "face_avatar_av20_fluffy.png",
+    "avatar_url": "/avatars/avatar_av20_fluffy.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av20_fluffy.png"
+  },
+  {
+    "id": "avatar_av21_motivational_workspace",
+    "filename": "avatar_av21_motivational_workspace.jpg",
+    "label": "AV21 Motivational Workspace",
+    "face_logo": "face_avatar_av21_motivational_workspace.png",
+    "avatar_url": "/avatars/avatar_av21_motivational_workspace.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av21_motivational_workspace.png"
+  },
+  {
+    "id": "avatar_av22_perfect_research",
+    "filename": "avatar_av22_perfect_research.jpg",
+    "label": "AV22 Perfect Research",
+    "face_logo": "face_avatar_av22_perfect_research.png",
+    "avatar_url": "/avatars/avatar_av22_perfect_research.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av22_perfect_research.png"
+  },
+  {
+    "id": "avatar_av23_productive_soft",
+    "filename": "avatar_av23_productive_soft.jpg",
+    "label": "AV23 Productive Soft",
+    "face_logo": "face_avatar_av23_productive_soft.png",
+    "avatar_url": "/avatars/avatar_av23_productive_soft.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av23_productive_soft.png"
+  },
+  {
+    "id": "avatar_av24_romanticizing_night",
+    "filename": "avatar_av24_romanticizing_night.jpg",
+    "label": "AV24 Romanticizing Night",
+    "face_logo": "face_avatar_av24_romanticizing_night.png",
+    "avatar_url": "/avatars/avatar_av24_romanticizing_night.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av24_romanticizing_night.png"
+  },
+  {
+    "id": "avatar_av25_smiling_businesswoman",
+    "filename": "avatar_av25_smiling_businesswoman.jpg",
+    "label": "AV25 Smiling Businesswoman",
+    "face_logo": "face_avatar_av25_smiling_businesswoman.png",
+    "avatar_url": "/avatars/avatar_av25_smiling_businesswoman.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av25_smiling_businesswoman.png"
+  },
+  {
+    "id": "avatar_av26_late_night",
+    "filename": "avatar_av26_late_night.jpg",
+    "label": "AV26 Late Night",
+    "face_logo": "face_avatar_av26_late_night.png",
+    "avatar_url": "/avatars/avatar_av26_late_night.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av26_late_night.png"
+  },
+  {
+    "id": "avatar_av27_study_time",
+    "filename": "avatar_av27_study_time.jpg",
+    "label": "AV27 Study Time",
+    "face_logo": "face_avatar_av27_study_time.png",
+    "avatar_url": "/avatars/avatar_av27_study_time.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av27_study_time.png"
+  },
+  {
+    "id": "avatar_av28_turn_notes",
+    "filename": "avatar_av28_turn_notes.jpg",
+    "label": "AV28 Turn Notes",
+    "face_logo": "face_avatar_av28_turn_notes.png",
+    "avatar_url": "/avatars/avatar_av28_turn_notes.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av28_turn_notes.png"
+  },
+  {
+    "id": "avatar_av29_what_social",
+    "filename": "avatar_av29_what_social.jpg",
+    "label": "AV29 What Social",
+    "face_logo": "face_avatar_av29_what_social.png",
+    "avatar_url": "/avatars/avatar_av29_what_social.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av29_what_social.png"
+  },
+  {
+    "id": "avatar_av30_write",
+    "filename": "avatar_av30_write.jpg",
+    "label": "AV30 Write",
+    "face_logo": "face_avatar_av30_write.png",
+    "avatar_url": "/avatars/avatar_av30_write.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av30_write.png"
+  },
+  {
+    "id": "avatar_av31_dream_big",
+    "filename": "avatar_av31_dream_big.jpg",
+    "label": "AV31 Dream Big",
+    "face_logo": "face_avatar_av31_dream_big.png",
+    "avatar_url": "/avatars/avatar_av31_dream_big.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av31_dream_big.png"
+  },
+  {
+    "id": "avatar_av32_presenter",
+    "filename": "avatar_av32_presenter.jpg",
+    "label": "AV32 Presenter",
+    "face_logo": "face_avatar_av32_presenter.png",
+    "avatar_url": "/avatars/avatar_av32_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av32_presenter.png"
+  },
+  {
+    "id": "avatar_av33_presenter",
+    "filename": "avatar_av33_presenter.jpg",
+    "label": "AV33 Presenter",
+    "face_logo": "face_avatar_av33_presenter.png",
+    "avatar_url": "/avatars/avatar_av33_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av33_presenter.png"
+  },
+  {
+    "id": "avatar_av34_que_muchas",
+    "filename": "avatar_av34_que_muchas.jpg",
+    "label": "AV34 Que Muchas",
+    "face_logo": "face_avatar_av34_que_muchas.png",
+    "avatar_url": "/avatars/avatar_av34_que_muchas.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av34_que_muchas.png"
+  },
+  {
+    "id": "avatar_av35_code_fire",
+    "filename": "avatar_av35_code_fire.jpg",
+    "label": "AV35 Code Fire",
+    "face_logo": "face_avatar_av35_code_fire.png",
+    "avatar_url": "/avatars/avatar_av35_code_fire.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av35_code_fire.png"
+  },
+  {
+    "id": "avatar_av36_presenter",
+    "filename": "avatar_av36_presenter.jpg",
+    "label": "AV36 Presenter",
+    "face_logo": "face_avatar_av36_presenter.png",
+    "avatar_url": "/avatars/avatar_av36_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av36_presenter.png"
+  },
+  {
+    "id": "avatar_av37_hoodie_gamer",
+    "filename": "avatar_av37_hoodie_gamer.png",
+    "label": "AV37 Hoodie Gamer",
+    "face_logo": "face_avatar_av37_hoodie_gamer.png",
+    "avatar_url": "/avatars/avatar_av37_hoodie_gamer.png",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av37_hoodie_gamer.png"
+  },
+  {
+    "id": "avatar_av38_pink_art",
+    "filename": "avatar_av38_pink_art.png",
+    "label": "AV38 Pink Art",
+    "face_logo": "face_avatar_av38_pink_art.png",
+    "avatar_url": "/avatars/avatar_av38_pink_art.png",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av38_pink_art.png"
+  },
+  {
+    "id": "avatar_av40_student_developers",
+    "filename": "avatar_av40_student_developers.png",
+    "label": "AV40 Student Developers",
+    "face_logo": "face_avatar_av40_student_developers.png",
+    "avatar_url": "/avatars/avatar_av40_student_developers.png",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av40_student_developers.png"
+  },
+  {
+    "id": "avatar_av41_presenter",
+    "filename": "avatar_av41_presenter.jpg",
+    "label": "AV41 Presenter",
+    "face_logo": "face_avatar_av41_presenter.png",
+    "avatar_url": "/avatars/avatar_av41_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av41_presenter.png"
+  },
+  {
+    "id": "avatar_av42_anime_architecture",
+    "filename": "avatar_av42_anime_architecture.jpg",
+    "label": "AV42 Anime Architecture",
+    "face_logo": "face_avatar_av42_anime_architecture.png",
+    "avatar_url": "/avatars/avatar_av42_anime_architecture.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av42_anime_architecture.png"
+  },
+  {
+    "id": "avatar_av43_anime_working",
+    "filename": "avatar_av43_anime_working.jpg",
+    "label": "AV43 Anime Working",
+    "face_logo": "face_avatar_av43_anime_working.png",
+    "avatar_url": "/avatars/avatar_av43_anime_working.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av43_anime_working.png"
+  },
+  {
+    "id": "avatar_av44_another_world",
+    "filename": "avatar_av44_another_world.jpg",
+    "label": "AV44 Another World",
+    "face_logo": "face_avatar_av44_another_world.png",
+    "avatar_url": "/avatars/avatar_av44_another_world.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av44_another_world.png"
+  },
+  {
+    "id": "avatar_av45_baz_nler",
+    "filename": "avatar_av45_baz_nler.jpg",
+    "label": "AV45 Baz Nler",
+    "face_logo": "face_avatar_av45_baz_nler.png",
+    "avatar_url": "/avatars/avatar_av45_baz_nler.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av45_baz_nler.png"
+  },
+  {
+    "id": "avatar_av46_cute",
+    "filename": "avatar_av46_cute.jpg",
+    "label": "AV46 Cute",
+    "face_logo": "face_avatar_av46_cute.png",
+    "avatar_url": "/avatars/avatar_av46_cute.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av46_cute.png"
+  },
+  {
+    "id": "avatar_av47_cyberpunk_coding",
+    "filename": "avatar_av47_cyberpunk_coding.jpg",
+    "label": "AV47 Cyberpunk Coding",
+    "face_logo": "face_avatar_av47_cyberpunk_coding.png",
+    "avatar_url": "/avatars/avatar_av47_cyberpunk_coding.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av47_cyberpunk_coding.png"
+  },
+  {
+    "id": "avatar_av48_presenter",
+    "filename": "avatar_av48_presenter.jpg",
+    "label": "AV48 Presenter",
+    "face_logo": "face_avatar_av48_presenter.png",
+    "avatar_url": "/avatars/avatar_av48_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av48_presenter.png"
+  },
+  {
+    "id": "avatar_av49_presenter",
+    "filename": "avatar_av49_presenter.jpg",
+    "label": "AV49 Presenter",
+    "face_logo": "face_avatar_av49_presenter.png",
+    "avatar_url": "/avatars/avatar_av49_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av49_presenter.png"
+  },
+  {
+    "id": "avatar_av50_presenter",
+    "filename": "avatar_av50_presenter.jpg",
+    "label": "AV50 Presenter",
+    "face_logo": "face_avatar_av50_presenter.png",
+    "avatar_url": "/avatars/avatar_av50_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av50_presenter.png"
+  },
+  {
+    "id": "avatar_av51_presenter",
+    "filename": "avatar_av51_presenter.jpg",
+    "label": "AV51 Presenter",
+    "face_logo": "face_avatar_av51_presenter.png",
+    "avatar_url": "/avatars/avatar_av51_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av51_presenter.png"
+  },
+  {
+    "id": "avatar_av52_presenter",
+    "filename": "avatar_av52_presenter.jpg",
+    "label": "AV52 Presenter",
+    "face_logo": "face_avatar_av52_presenter.png",
+    "avatar_url": "/avatars/avatar_av52_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av52_presenter.png"
+  },
+  {
+    "id": "avatar_av53_presenter",
+    "filename": "avatar_av53_presenter.jpg",
+    "label": "AV53 Presenter",
+    "face_logo": "face_avatar_av53_presenter.png",
+    "avatar_url": "/avatars/avatar_av53_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av53_presenter.png"
+  },
+  {
+    "id": "avatar_av54_presenter",
+    "filename": "avatar_av54_presenter.jpg",
+    "label": "AV54 Presenter",
+    "face_logo": "face_avatar_av54_presenter.png",
+    "avatar_url": "/avatars/avatar_av54_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av54_presenter.png"
+  },
+  {
+    "id": "avatar_av55_presenter",
+    "filename": "avatar_av55_presenter.jpg",
+    "label": "AV55 Presenter",
+    "face_logo": "face_avatar_av55_presenter.png",
+    "avatar_url": "/avatars/avatar_av55_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av55_presenter.png"
+  },
+  {
+    "id": "avatar_av56_presenter",
+    "filename": "avatar_av56_presenter.jpg",
+    "label": "AV56 Presenter",
+    "face_logo": "face_avatar_av56_presenter.png",
+    "avatar_url": "/avatars/avatar_av56_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av56_presenter.png"
+  },
+  {
+    "id": "avatar_av57_presenter",
+    "filename": "avatar_av57_presenter.jpg",
+    "label": "AV57 Presenter",
+    "face_logo": "face_avatar_av57_presenter.png",
+    "avatar_url": "/avatars/avatar_av57_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av57_presenter.png"
+  },
+  {
+    "id": "avatar_av58_presenter",
+    "filename": "avatar_av58_presenter.jpg",
+    "label": "AV58 Presenter",
+    "face_logo": "face_avatar_av58_presenter.png",
+    "avatar_url": "/avatars/avatar_av58_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av58_presenter.png"
+  },
+  {
+    "id": "avatar_av59_presenter",
+    "filename": "avatar_av59_presenter.jpg",
+    "label": "AV59 Presenter",
+    "face_logo": "face_avatar_av59_presenter.png",
+    "avatar_url": "/avatars/avatar_av59_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av59_presenter.png"
+  },
+  {
+    "id": "avatar_av60_presenter",
+    "filename": "avatar_av60_presenter.jpg",
+    "label": "AV60 Presenter",
+    "face_logo": "face_avatar_av60_presenter.png",
+    "avatar_url": "/avatars/avatar_av60_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av60_presenter.png"
+  },
+  {
+    "id": "avatar_av61_presenter",
+    "filename": "avatar_av61_presenter.jpg",
+    "label": "AV61 Presenter",
+    "face_logo": "face_avatar_av61_presenter.png",
+    "avatar_url": "/avatars/avatar_av61_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av61_presenter.png"
+  },
+  {
+    "id": "avatar_av62_presenter",
+    "filename": "avatar_av62_presenter.jpg",
+    "label": "AV62 Presenter",
+    "face_logo": "face_avatar_av62_presenter.png",
+    "avatar_url": "/avatars/avatar_av62_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av62_presenter.png"
+  },
+  {
+    "id": "avatar_av63_presenter",
+    "filename": "avatar_av63_presenter.jpg",
+    "label": "AV63 Presenter",
+    "face_logo": "face_avatar_av63_presenter.png",
+    "avatar_url": "/avatars/avatar_av63_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av63_presenter.png"
+  },
+  {
+    "id": "avatar_av64_presenter",
+    "filename": "avatar_av64_presenter.jpg",
+    "label": "AV64 Presenter",
+    "face_logo": "face_avatar_av64_presenter.png",
+    "avatar_url": "/avatars/avatar_av64_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av64_presenter.png"
+  },
+  {
+    "id": "avatar_av65_presenter",
+    "filename": "avatar_av65_presenter.jpg",
+    "label": "AV65 Presenter",
+    "face_logo": "face_avatar_av65_presenter.png",
+    "avatar_url": "/avatars/avatar_av65_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av65_presenter.png"
+  },
+  {
+    "id": "avatar_av66_presenter",
+    "filename": "avatar_av66_presenter.jpg",
+    "label": "AV66 Presenter",
+    "face_logo": "face_avatar_av66_presenter.png",
+    "avatar_url": "/avatars/avatar_av66_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av66_presenter.png"
+  },
+  {
+    "id": "avatar_av67_presenter",
+    "filename": "avatar_av67_presenter.jpg",
+    "label": "AV67 Presenter",
+    "face_logo": "face_avatar_av67_presenter.png",
+    "avatar_url": "/avatars/avatar_av67_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av67_presenter.png"
+  },
+  {
+    "id": "avatar_av68_presenter",
+    "filename": "avatar_av68_presenter.jpg",
+    "label": "AV68 Presenter",
+    "face_logo": "face_avatar_av68_presenter.png",
+    "avatar_url": "/avatars/avatar_av68_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av68_presenter.png"
+  },
+  {
+    "id": "avatar_av69_presenter",
+    "filename": "avatar_av69_presenter.jpg",
+    "label": "AV69 Presenter",
+    "face_logo": "face_avatar_av69_presenter.png",
+    "avatar_url": "/avatars/avatar_av69_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av69_presenter.png"
+  },
+  {
+    "id": "avatar_av70_presenter",
+    "filename": "avatar_av70_presenter.jpg",
+    "label": "AV70 Presenter",
+    "face_logo": "face_avatar_av70_presenter.png",
+    "avatar_url": "/avatars/avatar_av70_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av70_presenter.png"
+  },
+  {
+    "id": "avatar_av71_presenter",
+    "filename": "avatar_av71_presenter.jpg",
+    "label": "AV71 Presenter",
+    "face_logo": "face_avatar_av71_presenter.png",
+    "avatar_url": "/avatars/avatar_av71_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av71_presenter.png"
+  },
+  {
+    "id": "avatar_av72_presenter",
+    "filename": "avatar_av72_presenter.jpg",
+    "label": "AV72 Presenter",
+    "face_logo": "face_avatar_av72_presenter.png",
+    "avatar_url": "/avatars/avatar_av72_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av72_presenter.png"
+  },
+  {
+    "id": "avatar_av73_presenter",
+    "filename": "avatar_av73_presenter.jpg",
+    "label": "AV73 Presenter",
+    "face_logo": "face_avatar_av73_presenter.png",
+    "avatar_url": "/avatars/avatar_av73_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av73_presenter.png"
+  },
+  {
+    "id": "avatar_av74_exam_time",
+    "filename": "avatar_av74_exam_time.jpg",
+    "label": "AV74 Exam Time",
+    "face_logo": "face_avatar_av74_exam_time.png",
+    "avatar_url": "/avatars/avatar_av74_exam_time.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av74_exam_time.png"
+  },
+  {
+    "id": "avatar_av75_follow_more",
+    "filename": "avatar_av75_follow_more.jpg",
+    "label": "AV75 Follow More",
+    "face_logo": "face_avatar_av75_follow_more.png",
+    "avatar_url": "/avatars/avatar_av75_follow_more.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av75_follow_more.png"
+  },
+  {
+    "id": "avatar_av76_presenter",
+    "filename": "avatar_av76_presenter.jpg",
+    "label": "AV76 Presenter",
+    "face_logo": "face_avatar_av76_presenter.png",
+    "avatar_url": "/avatars/avatar_av76_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av76_presenter.png"
+  },
+  {
+    "id": "avatar_av77_kona_dhot",
+    "filename": "avatar_av77_kona_dhot.jpg",
+    "label": "AV77 Kona Dhot",
+    "face_logo": "face_avatar_av77_kona_dhot.png",
+    "avatar_url": "/avatars/avatar_av77_kona_dhot.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av77_kona_dhot.png"
+  },
+  {
+    "id": "avatar_av78_listening_music",
+    "filename": "avatar_av78_listening_music.jpg",
+    "label": "AV78 Listening Music",
+    "face_logo": "face_avatar_av78_listening_music.png",
+    "avatar_url": "/avatars/avatar_av78_listening_music.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av78_listening_music.png"
+  },
+  {
+    "id": "avatar_av79_siento",
+    "filename": "avatar_av79_siento.jpg",
+    "label": "AV79 Siento",
+    "face_logo": "face_avatar_av79_siento.png",
+    "avatar_url": "/avatars/avatar_av79_siento.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av79_siento.png"
+  },
+  {
+    "id": "avatar_av80_personality",
+    "filename": "avatar_av80_personality.jpg",
+    "label": "AV80 Personality",
+    "face_logo": "face_avatar_av80_personality.png",
+    "avatar_url": "/avatars/avatar_av80_personality.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av80_personality.png"
+  },
+  {
+    "id": "avatar_av81_onlinebranding_build",
+    "filename": "avatar_av81_onlinebranding_build.jpg",
+    "label": "AV81 Onlinebranding Build",
+    "face_logo": "face_avatar_av81_onlinebranding_build.png",
+    "avatar_url": "/avatars/avatar_av81_onlinebranding_build.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av81_onlinebranding_build.png"
+  },
+  {
+    "id": "avatar_av82_paris",
+    "filename": "avatar_av82_paris.jpg",
+    "label": "AV82 Paris",
+    "face_logo": "face_avatar_av82_paris.png",
+    "avatar_url": "/avatars/avatar_av82_paris.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av82_paris.png"
+  },
+  {
+    "id": "avatar_av83_pov_found",
+    "filename": "avatar_av83_pov_found.jpg",
+    "label": "AV83 Pov Found",
+    "face_logo": "face_avatar_av83_pov_found.png",
+    "avatar_url": "/avatars/avatar_av83_pov_found.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av83_pov_found.png"
+  },
+  {
+    "id": "avatar_av84_programmer",
+    "filename": "avatar_av84_programmer.jpg",
+    "label": "AV84 Programmer",
+    "face_logo": "face_avatar_av84_programmer.png",
+    "avatar_url": "/avatars/avatar_av84_programmer.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av84_programmer.png"
+  },
+  {
+    "id": "avatar_av85_save_this",
+    "filename": "avatar_av85_save_this.jpg",
+    "label": "AV85 Save This",
+    "face_logo": "face_avatar_av85_save_this.png",
+    "avatar_url": "/avatars/avatar_av85_save_this.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av85_save_this.png"
+  },
+  {
+    "id": "avatar_av86_smart_boy",
+    "filename": "avatar_av86_smart_boy.jpg",
+    "label": "AV86 Smart Boy",
+    "face_logo": "face_avatar_av86_smart_boy.png",
+    "avatar_url": "/avatars/avatar_av86_smart_boy.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av86_smart_boy.png"
+  },
+  {
+    "id": "avatar_av87_startup_founder",
+    "filename": "avatar_av87_startup_founder.jpg",
+    "label": "AV87 Startup Founder",
+    "face_logo": "face_avatar_av87_startup_founder.png",
+    "avatar_url": "/avatars/avatar_av87_startup_founder.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av87_startup_founder.png"
+  },
+  {
+    "id": "avatar_av88_take_trading",
+    "filename": "avatar_av88_take_trading.jpg",
+    "label": "AV88 Take Trading",
+    "face_logo": "face_avatar_av88_take_trading.png",
+    "avatar_url": "/avatars/avatar_av88_take_trading.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av88_take_trading.png"
+  },
+  {
+    "id": "avatar_av89_ultimate_dual",
+    "filename": "avatar_av89_ultimate_dual.jpg",
+    "label": "AV89 Ultimate Dual",
+    "face_logo": "face_avatar_av89_ultimate_dual.png",
+    "avatar_url": "/avatars/avatar_av89_ultimate_dual.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av89_ultimate_dual.png"
+  },
+  {
+    "id": "avatar_av90_time_work",
+    "filename": "avatar_av90_time_work.jpg",
+    "label": "AV90 Time Work",
+    "face_logo": "face_avatar_av90_time_work.png",
+    "avatar_url": "/avatars/avatar_av90_time_work.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av90_time_work.png"
+  },
+  {
+    "id": "avatar_av91_visualize_future",
+    "filename": "avatar_av91_visualize_future.jpg",
+    "label": "AV91 Visualize Future",
+    "face_logo": "face_avatar_av91_visualize_future.png",
+    "avatar_url": "/avatars/avatar_av91_visualize_future.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av91_visualize_future.png"
+  },
+  {
+    "id": "avatar_av92_women",
+    "filename": "avatar_av92_women.jpg",
+    "label": "AV92 Women",
+    "face_logo": "face_avatar_av92_women.png",
+    "avatar_url": "/avatars/avatar_av92_women.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av92_women.png"
+  },
+  {
+    "id": "avatar_av93_working_hard",
+    "filename": "avatar_av93_working_hard.jpg",
+    "label": "AV93 Working Hard",
+    "face_logo": "face_avatar_av93_working_hard.png",
+    "avatar_url": "/avatars/avatar_av93_working_hard.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av93_working_hard.png"
+  },
+  {
+    "id": "avatar_av94_working_women",
+    "filename": "avatar_av94_working_women.jpg",
+    "label": "AV94 Working Women",
+    "face_logo": "face_avatar_av94_working_women.png",
+    "avatar_url": "/avatars/avatar_av94_working_women.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av94_working_women.png"
+  },
+  {
+    "id": "avatar_av95_presenter",
+    "filename": "avatar_av95_presenter.jpg",
+    "label": "AV95 Presenter",
+    "face_logo": "face_avatar_av95_presenter.png",
+    "avatar_url": "/avatars/avatar_av95_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av95_presenter.png"
+  },
+  {
+    "id": "avatar_av96_presenter",
+    "filename": "avatar_av96_presenter.jpg",
+    "label": "AV96 Presenter",
+    "face_logo": "face_avatar_av96_presenter.png",
+    "avatar_url": "/avatars/avatar_av96_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av96_presenter.png"
+  },
+  {
+    "id": "avatar_av97_presenter",
+    "filename": "avatar_av97_presenter.jpg",
+    "label": "AV97 Presenter",
+    "face_logo": "face_avatar_av97_presenter.png",
+    "avatar_url": "/avatars/avatar_av97_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av97_presenter.png"
+  },
+  {
+    "id": "avatar_av98_presenter",
+    "filename": "avatar_av98_presenter.jpg",
+    "label": "AV98 Presenter",
+    "face_logo": "face_avatar_av98_presenter.png",
+    "avatar_url": "/avatars/avatar_av98_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av98_presenter.png"
+  },
+  {
+    "id": "avatar_av99_digital",
+    "filename": "avatar_av99_digital.jpg",
+    "label": "AV99 Digital",
+    "face_logo": "face_avatar_av99_digital.png",
+    "avatar_url": "/avatars/avatar_av99_digital.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av99_digital.png"
+  },
+  {
+    "id": "avatar_av100_behind_every",
+    "filename": "avatar_av100_behind_every.jpg",
+    "label": "AV100 Behind Every",
+    "face_logo": "face_avatar_av100_behind_every.png",
+    "avatar_url": "/avatars/avatar_av100_behind_every.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av100_behind_every.png"
+  },
+  {
+    "id": "avatar_av101_tiktok",
+    "filename": "avatar_av101_tiktok.jpg",
+    "label": "AV101 Tiktok",
+    "face_logo": "face_avatar_av101_tiktok.png",
+    "avatar_url": "/avatars/avatar_av101_tiktok.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av101_tiktok.png"
+  },
+  {
+    "id": "avatar_av102_cyberpunk",
+    "filename": "avatar_av102_cyberpunk.jpg",
+    "label": "AV102 Cyberpunk",
+    "face_logo": "face_avatar_av102_cyberpunk.png",
+    "avatar_url": "/avatars/avatar_av102_cyberpunk.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av102_cyberpunk.png"
+  },
+  {
+    "id": "avatar_av103_ver",
+    "filename": "avatar_av103_ver.jpg",
+    "label": "AV103 Ver",
+    "face_logo": "face_avatar_av103_ver.png",
+    "avatar_url": "/avatars/avatar_av103_ver.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av103_ver.png"
+  },
+  {
+    "id": "avatar_av104_avatar_sell",
+    "filename": "avatar_av104_avatar_sell.jpg",
+    "label": "AV104 Avatar Sell",
+    "face_logo": "face_avatar_av104_avatar_sell.png",
+    "avatar_url": "/avatars/avatar_av104_avatar_sell.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av104_avatar_sell.png"
+  },
+  {
+    "id": "avatar_av105_duniya",
+    "filename": "avatar_av105_duniya.jpg",
+    "label": "AV105 Duniya",
+    "face_logo": "face_avatar_av105_duniya.png",
+    "avatar_url": "/avatars/avatar_av105_duniya.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av105_duniya.png"
+  },
+  {
+    "id": "avatar_av106_anime_coder",
+    "filename": "avatar_av106_anime_coder.jpg",
+    "label": "AV106 Anime Coder",
+    "face_logo": "face_avatar_av106_anime_coder.png",
+    "avatar_url": "/avatars/avatar_av106_anime_coder.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av106_anime_coder.png"
+  },
+  {
+    "id": "avatar_av107_asian",
+    "filename": "avatar_av107_asian.jpg",
+    "label": "AV107 Asian",
+    "face_logo": "face_avatar_av107_asian.png",
+    "avatar_url": "/avatars/avatar_av107_asian.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av107_asian.png"
+  },
+  {
+    "id": "avatar_av108_beyond_bookkeeping",
+    "filename": "avatar_av108_beyond_bookkeeping.jpg",
+    "label": "AV108 Beyond Bookkeeping",
+    "face_logo": "face_avatar_av108_beyond_bookkeeping.png",
+    "avatar_url": "/avatars/avatar_av108_beyond_bookkeeping.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av108_beyond_bookkeeping.png"
+  },
+  {
+    "id": "avatar_av109_celebrate_brand",
+    "filename": "avatar_av109_celebrate_brand.jpg",
+    "label": "AV109 Celebrate Brand",
+    "face_logo": "face_avatar_av109_celebrate_brand.png",
+    "avatar_url": "/avatars/avatar_av109_celebrate_brand.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av109_celebrate_brand.png"
+  },
+  {
+    "id": "avatar_av110_coffee_good",
+    "filename": "avatar_av110_coffee_good.jpg",
+    "label": "AV110 Coffee Good",
+    "face_logo": "face_avatar_av110_coffee_good.png",
+    "avatar_url": "/avatars/avatar_av110_coffee_good.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av110_coffee_good.png"
+  },
+  {
+    "id": "avatar_av111_cozy_anime",
+    "filename": "avatar_av111_cozy_anime.jpg",
+    "label": "AV111 Cozy Anime",
+    "face_logo": "face_avatar_av111_cozy_anime.png",
+    "avatar_url": "/avatars/avatar_av111_cozy_anime.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av111_cozy_anime.png"
+  },
+  {
+    "id": "avatar_av112_presenter",
+    "filename": "avatar_av112_presenter.jpg",
+    "label": "AV112 Presenter",
+    "face_logo": "face_avatar_av112_presenter.png",
+    "avatar_url": "/avatars/avatar_av112_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av112_presenter.png"
+  },
+  {
+    "id": "avatar_av113_presenter",
+    "filename": "avatar_av113_presenter.jpg",
+    "label": "AV113 Presenter",
+    "face_logo": "face_avatar_av113_presenter.png",
+    "avatar_url": "/avatars/avatar_av113_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av113_presenter.png"
+  },
+  {
+    "id": "avatar_av114_presenter",
+    "filename": "avatar_av114_presenter.jpg",
+    "label": "AV114 Presenter",
+    "face_logo": "face_avatar_av114_presenter.png",
+    "avatar_url": "/avatars/avatar_av114_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av114_presenter.png"
+  },
+  {
+    "id": "avatar_av115_presenter",
+    "filename": "avatar_av115_presenter.jpg",
+    "label": "AV115 Presenter",
+    "face_logo": "face_avatar_av115_presenter.png",
+    "avatar_url": "/avatars/avatar_av115_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av115_presenter.png"
+  },
+  {
+    "id": "avatar_av116_presenter",
+    "filename": "avatar_av116_presenter.jpg",
+    "label": "AV116 Presenter",
+    "face_logo": "face_avatar_av116_presenter.png",
+    "avatar_url": "/avatars/avatar_av116_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av116_presenter.png"
+  },
+  {
+    "id": "avatar_av117_presenter",
+    "filename": "avatar_av117_presenter.jpg",
+    "label": "AV117 Presenter",
+    "face_logo": "face_avatar_av117_presenter.png",
+    "avatar_url": "/avatars/avatar_av117_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av117_presenter.png"
+  },
+  {
+    "id": "avatar_av118_presenter",
+    "filename": "avatar_av118_presenter.jpg",
+    "label": "AV118 Presenter",
+    "face_logo": "face_avatar_av118_presenter.png",
+    "avatar_url": "/avatars/avatar_av118_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av118_presenter.png"
+  },
+  {
+    "id": "avatar_av119_presenter",
+    "filename": "avatar_av119_presenter.jpg",
+    "label": "AV119 Presenter",
+    "face_logo": "face_avatar_av119_presenter.png",
+    "avatar_url": "/avatars/avatar_av119_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av119_presenter.png"
+  },
+  {
+    "id": "avatar_av120_presenter",
+    "filename": "avatar_av120_presenter.jpg",
+    "label": "AV120 Presenter",
+    "face_logo": "face_avatar_av120_presenter.png",
+    "avatar_url": "/avatars/avatar_av120_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av120_presenter.png"
+  },
+  {
+    "id": "avatar_av121_presenter",
+    "filename": "avatar_av121_presenter.jpg",
+    "label": "AV121 Presenter",
+    "face_logo": "face_avatar_av121_presenter.png",
+    "avatar_url": "/avatars/avatar_av121_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av121_presenter.png"
+  },
+  {
+    "id": "avatar_av122_presenter",
+    "filename": "avatar_av122_presenter.jpg",
+    "label": "AV122 Presenter",
+    "face_logo": "face_avatar_av122_presenter.png",
+    "avatar_url": "/avatars/avatar_av122_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av122_presenter.png"
+  },
+  {
+    "id": "avatar_av123_presenter",
+    "filename": "avatar_av123_presenter.jpg",
+    "label": "AV123 Presenter",
+    "face_logo": "face_avatar_av123_presenter.png",
+    "avatar_url": "/avatars/avatar_av123_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av123_presenter.png"
+  },
+  {
+    "id": "avatar_av124_presenter",
+    "filename": "avatar_av124_presenter.jpg",
+    "label": "AV124 Presenter",
+    "face_logo": "face_avatar_av124_presenter.png",
+    "avatar_url": "/avatars/avatar_av124_presenter.jpg",
+    "face_logo_url": "/avatar_face_logos/face_avatar_av124_presenter.png"
+  }
+]
