@@ -3,17 +3,13 @@ main = "src/index.js"
 compatibility_date = "2026-08-28"
 
 [triggers]
-# 48 Reels / Day Total Distribution:
-# 1. Peak Active Daytime & Night (6:00 AM IST to 12:00 AM Midnight IST / 00:30 - 18:30 UTC):
-#    - Fires ~every 25 min (at :00, :25, :50 of active hours) -> 43 reels
-# 2. Late Night / Off-Peak (1:00 AM IST to 6:00 AM IST / 19:30 - 00:00 UTC):
-#    - Fires 1 reel every hour (at :30) -> 5 reels
-# Total = 43 + 5 = 48 reels / day
-# 3. Job Scraping: 6:00 AM IST (00:30 UTC) & 4:00 PM IST (10:30 UTC)
+# 1. Reel Publish: 1 Reel Every Hour (24 reels / day max)
+#    - Fires at minute :00 of every hour
+# 2. Job Scraping: 6:00 AM IST (00:30 UTC) & 4:00 PM IST (10:30 UTC)
 crons = [
-  "0,25,50 1-18 * * *",
-  "30 0,19,20,21,22,23 * * *",
-  "30 10 * * *"
+  "0 * * * *",
+  "30 0,10 * * *"
 ]
+
 
 

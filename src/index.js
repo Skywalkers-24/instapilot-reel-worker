@@ -22,11 +22,12 @@ export default {
     console.log(`[cron] Scheduled trigger started at ${startedAt}, cron: ${cronPattern}`);
 
     // Determine event type based on cron expression:
-    // "30 10 * * *" or 6:00 AM IST scrape -> Scrape Jobs
-    // Other triggers -> Publish Reel
+    // "30 0,10 * * *" -> Scrape Jobs (6:00 AM & 4:00 PM IST)
+    // "0 * * * *" -> Publish Reel (1 reel every hour)
     const isJobScrape =
+      cronPattern === "30 0,10 * * *" ||
       cronPattern === "30 10 * * *" ||
-      (cronPattern.includes("30 0") && !cronPattern.includes("19"));
+      cronPattern === "30 0 * * *";
 
     const eventType = isJobScrape ? "scrape-jobs" : "publish-reel";
     const endpoint = isJobScrape ? "/api/cron/trigger-scrape-jobs" : "/api/cron/trigger-publish";
@@ -37,7 +38,6 @@ export default {
       cron: cronPattern,
       scheduledTime: controller?.scheduledTime,
     });
-
 
     ctx.waitUntil(triggerPromise);
     await triggerPromise;
@@ -115,7 +115,7 @@ export default {
       worker: "instapilot-reel-worker",
       status: "online",
       schedules: [
-        { name: "Reel Publish", cron: "0,22,45 0-18 * * *", frequency: "48 Reels / Day (6:00 AM - 12:00 AM Midnight IST)" },
+        { name: "Reel Publish", cron: "0 * * * *", frequency: "1 Reel Every Hour (24 Reels / Day max)" },
         { name: "Job Scraping", cron: "30 0,10 * * *", frequency: "6:00 AM & 4:00 PM IST (00:30 & 10:30 UTC)" },
       ],
       configured: {
@@ -128,6 +128,7 @@ export default {
         scheduled_test: `${url.origin}/__scheduled`,
         health: `${url.origin}/health`,
       },
+
 
       timestamp: new Date().toISOString(),
     };
