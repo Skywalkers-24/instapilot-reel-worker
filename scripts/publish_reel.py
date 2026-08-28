@@ -559,13 +559,13 @@ def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "") -> tu
 
 
 def main() -> int:
-    st, build = backend_post("/api/cron/auto-post", {})
+    st, build = backend_post("/api/cron/auto-post", {"force": True})
     if st == 200:
         print(f"auto-post: {build.get('status')} reel_id={build.get('reel_id')}")
     else:
         print(f"auto-post HTTP {st}: {build}")
 
-    status, data = backend_post("/api/cron/next-reel", None)
+    status, data = backend_post("/api/cron/next-reel", {"force": True})
     if status != 200:
         print(f"next-reel failed: {status} {data}")
         return 1
