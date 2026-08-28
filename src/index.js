@@ -22,12 +22,11 @@ export default {
     console.log(`[cron] Scheduled trigger started at ${startedAt}, cron: ${cronPattern}`);
 
     // Determine event type based on cron expression:
-    // "30 0,10 * * *" or "30 0 * * *" or "30 10 * * *" -> Scrape Jobs (6 AM & 4 PM IST)
-    // "*/15 * * * *" -> Publish Reel
+    // "30 10 * * *" or 6:00 AM IST scrape -> Scrape Jobs
+    // Other triggers -> Publish Reel
     const isJobScrape =
-      cronPattern.includes("30 0") ||
-      cronPattern.includes("30 10") ||
-      cronPattern === "30 0,10 * * *";
+      cronPattern === "30 10 * * *" ||
+      (cronPattern.includes("30 0") && !cronPattern.includes("19"));
 
     const eventType = isJobScrape ? "scrape-jobs" : "publish-reel";
     const endpoint = isJobScrape ? "/api/cron/trigger-scrape-jobs" : "/api/cron/trigger-publish";
@@ -38,6 +37,7 @@ export default {
       cron: cronPattern,
       scheduledTime: controller?.scheduledTime,
     });
+
 
     ctx.waitUntil(triggerPromise);
     await triggerPromise;
