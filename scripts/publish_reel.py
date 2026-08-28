@@ -116,7 +116,7 @@ def ensure_release() -> int:
     return rel["id"]
 
 
-def upload_asset(release_id: int, file_path: str, asset_name: str) -> str:
+def upload_asset(release_id: int, file_path: str, asset_name: str, content_type: str = "video/mp4") -> str:
     _, rel = gh_api("GET", f"/repos/{GITHUB_REPO}/releases/{release_id}")
     for a in rel.get("assets", []):
         if a.get("name") == asset_name:
@@ -129,13 +129,14 @@ def upload_asset(release_id: int, file_path: str, asset_name: str) -> str:
         "POST", upload_url,
         headers={
             "Authorization": f"Bearer {GITHUB_TOKEN}",
-            "Content-Type": "video/mp4",
+            "Content-Type": content_type,
         },
         data=content, timeout=180,
     )
     if status not in (200, 201):
         raise RuntimeError(f"Asset upload failed: {status} {raw[:300]!r}")
     return json.loads(raw)["browser_download_url"]
+
 
 
 def prune_assets(release_id: int, keep: int) -> None:
@@ -257,10 +258,41 @@ def get_scene(frame: int) -> str:
     return "cta_action"
 
 
-def resolve_local_face_logo(avatar_name: str | None) -> Image.Image:
-    """Resolve face logo directly from local worker/face_logos/ directory."""
+# ─── Dynamic Palette System for Rich Visual Diversity ────────────────────────
+THEME_PALETTES = [
+    {  # 0: Deep Cyber Cyan (Modern Tech)
+        "bg_top": (10, 15, 28), "bg_bot": (18, 28, 48),
+        "card_bg": (20, 26, 42, 240), "accent": (0, 217, 255), "accent_sub": (255, 106, 0),
+        "glow1": (0, 217, 255, 35), "glow2": (255, 106, 0, 25),
+    },
+    {  # 1: Electric Purple / Neon Violet (AI & Product)
+        "bg_top": (16, 10, 30), "bg_bot": (32, 18, 56),
+        "card_bg": (28, 20, 48, 240), "accent": (191, 90, 242), "accent_sub": (255, 59, 128),
+        "glow1": (191, 90, 242, 35), "glow2": (0, 217, 255, 25),
+    },
+    {  # 2: Obsidian Gold / Amber (High CTC & Premium)
+        "bg_top": (18, 14, 8), "bg_bot": (36, 26, 12),
+        "card_bg": (32, 24, 14, 240), "accent": (255, 184, 0), "accent_sub": (255, 106, 0),
+        "glow1": (255, 184, 0, 35), "glow2": (255, 75, 43, 25),
+    },
+    {  # 3: Emerald Dark (Fintech & Data)
+        "bg_top": (8, 20, 18), "bg_bot": (14, 38, 32),
+        "card_bg": (14, 34, 28, 240), "accent": (48, 209, 88), "accent_sub": (0, 217, 255),
+        "glow1": (48, 209, 88, 35), "glow2": (0, 217, 255, 25),
+    },
+    {  # 4: Sunset Crimson (Urgent Drives & Off-Campus)
+        "bg_top": (22, 10, 14), "bg_bot": (44, 16, 24),
+        "card_bg": (36, 18, 26, 240), "accent": (255, 69, 58), "accent_sub": (255, 159, 10),
+        "glow1": (255, 69, 58, 35), "glow2": (255, 159, 10, 25),
+    },
+]
+
+
+def resolve_local_face_logo(avatar_name: str | None, reel_id: int | None = None) -> Image.Image:
+    """Resolve face logo directly from local worker/face_logos/ directory with dynamic rotation."""
     logos_dir = Path("face_logos")
     if logos_dir.exists():
+        all_final = sorted(logos_dir.glob("final_face_*.png"))
         if avatar_name:
             name_clean = Path(avatar_name).stem.lower().replace("avatar_", "").replace("face_", "")
             match = re.search(r"av(\d+)", name_clean)
@@ -269,7 +301,7 @@ def resolve_local_face_logo(avatar_name: str | None) -> Image.Image:
             # 1. Exact match by number (final_face_avXX_*.png)
             if num_str:
                 target_prefix = f"final_face_av{int(num_str):02d}_"
-                for f in logos_dir.glob("final_face_*.png"):
+                for f in all_final:
                     if f.stem.lower().startswith(target_prefix):
                         try:
                             return Image.open(f).convert("RGBA")
@@ -277,7 +309,7 @@ def resolve_local_face_logo(avatar_name: str | None) -> Image.Image:
                             pass
 
             # 2. Match by clean slug
-            for f in logos_dir.glob("final_face_*.png"):
+            for f in all_final:
                 f_clean = f.stem.lower().replace("final_face_", "")
                 if name_clean in f_clean or f_clean in name_clean:
                     try:
@@ -285,11 +317,11 @@ def resolve_local_face_logo(avatar_name: str | None) -> Image.Image:
                     except Exception:
                         pass
 
-        # 3. Fallback to first available final face logo
-        all_final = sorted(logos_dir.glob("final_face_*.png"))
+        # 3. Dynamic Rotation across 90 face logos using reel_id
         if all_final:
+            idx = (int(reel_id or 0) % len(all_final)) if reel_id else int(time.time()) % len(all_final)
             try:
-                return Image.open(all_final[0]).convert("RGBA")
+                return Image.open(all_final[idx]).convert("RGBA")
             except Exception:
                 pass
 
@@ -298,6 +330,13 @@ def resolve_local_face_logo(avatar_name: str | None) -> Image.Image:
     d = ImageDraw.Draw(circle)
     d.ellipse((0, 0, 200, 200), fill=(0, 217, 255, 200))
     return circle
+
+
+def get_theme_palette(reel_id: int | None) -> dict:
+    """Pick rotating aesthetic color palette based on reel_id."""
+    idx = int(reel_id or 0) % len(THEME_PALETTES)
+    return THEME_PALETTES[idx]
+
 
 
 def resolve_local_avatar_file(avatar_name: str | None) -> Path | None:
@@ -429,9 +468,12 @@ def get_ffmpeg_exe() -> str:
 
 
 def generate_local_content_cover(reel_info: dict) -> Image.Image:
-    """Generate the 1080x1920 job content card 100% locally on worker (zero network download)."""
+    """Generate the 1080x1920 job content card 100% locally on worker with rotating aesthetics."""
     CW, CH = 1080, 1920
-    img = Image.new("RGB", (CW, CH), COLOR_BG_BASE)
+    reel_id = reel_info.get("reel_id")
+    palette = get_theme_palette(reel_id)
+
+    img = Image.new("RGB", (CW, CH), palette["bg_top"])
     draw = ImageDraw.Draw(img)
 
     company = reel_info.get("company") or "Top Tech Company"
@@ -443,17 +485,23 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
     badge_text = (reel_info.get("badge_text") or "OFFICIAL HIRING ALERT").upper()
     avatar_name = reel_info.get("avatar_name") or ""
 
-    # Gradient background
+    # Gradient background using theme palette
+    top_c = palette["bg_top"]
+    bot_c = palette["bg_bot"]
     for y in range(0, CH, 16):
         yr = y / CH
-        color = (int(12 + 16 * yr), int(16 + 22 * yr), int(26 + 32 * (1 - yr)))
+        color = (
+            int(top_c[0] + (bot_c[0] - top_c[0]) * yr),
+            int(top_c[1] + (bot_c[1] - top_c[1]) * yr),
+            int(top_c[2] + (bot_c[2] - top_c[2]) * yr),
+        )
         draw.rectangle((0, y, CW, y + 16), fill=color)
 
-    # Glow blob
+    # Glow blob using theme palette
     glow = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
     gd = ImageDraw.Draw(glow)
-    gd.ellipse((CW // 2 - 350, 300, CW // 2 + 350, 1000), fill=(0, 217, 255, 30))
-    gd.ellipse((CW // 2 - 300, 900, CW // 2 + 300, 1500), fill=(255, 106, 0, 25))
+    gd.ellipse((CW // 2 - 350, 300, CW // 2 + 350, 1000), fill=palette["glow1"])
+    gd.ellipse((CW // 2 - 300, 900, CW // 2 + 300, 1500), fill=palette["glow2"])
     blurred_glow = glow.filter(ImageFilter.GaussianBlur(64))
     img = Image.alpha_composite(img.convert("RGBA"), blurred_glow).convert("RGB")
     draw = ImageDraw.Draw(img)
@@ -462,7 +510,7 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
     content_w = CW - margin_x * 2
 
     # Top channel header
-    face_raw = resolve_local_face_logo(avatar_name)
+    face_raw = resolve_local_face_logo(avatar_name, reel_id)
     face_header = face_raw.resize((100, 100), Image.Resampling.LANCZOS)
     img.paste(face_header, (margin_x, 80), face_header)
     draw.text((margin_x + 120, 92), CHANNEL_DISPLAY_NAME, font=FONT_MED, fill=COLOR_TEXT_WHITE)
@@ -471,30 +519,30 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
     # Main Card Box
     card_top = 210
     card_h = 1540
-    card_surface = Image.new("RGBA", (content_w, card_h), COLOR_CARD_BG)
+    card_surface = Image.new("RGBA", (content_w, card_h), palette["card_bg"])
     card_draw = ImageDraw.Draw(card_surface)
-    card_draw.rounded_rectangle((0, 0, content_w, card_h), radius=36, fill=COLOR_CARD_BG, outline=COLOR_CARD_BORDER, width=2)
+    card_draw.rounded_rectangle((0, 0, content_w, card_h), radius=36, fill=palette["card_bg"], outline=COLOR_CARD_BORDER, width=2)
     img.paste(card_surface, (margin_x, card_top), card_surface)
 
-    # Face Logo / Center Hero Badge
+    # Face Logo / Center Hero Badge (Rotating across 90 avatars)
     face_hero = face_raw.resize((210, 210), Image.Resampling.LANCZOS)
     fh_x = (CW - 210) // 2
     fh_y = card_top + 46
     img.paste(face_hero, (fh_x, fh_y), face_hero)
-    draw.ellipse((fh_x, fh_y, fh_x + 210, fh_y + 210), outline=COLOR_ACCENT, width=4)
+    draw.ellipse((fh_x, fh_y, fh_x + 210, fh_y + 210), outline=palette["accent"], width=4)
 
     # Urgency pill badge
     fnt_b = FONT_BADGE
     bw = draw.textbbox((0, 0), badge_text, font=fnt_b)[2] + 48
     bx = (CW - bw) // 2
     by = card_top + 280
-    rounded_rect(draw, (bx, by, bx + bw, by + 56), 18, COLOR_ACCENT_ORANGE)
+    rounded_rect(draw, (bx, by, bx + bw, by + 56), 18, palette["accent_sub"])
     draw.text(((CW - draw.textbbox((0, 0), badge_text, font=fnt_b)[2]) // 2, by + 12), badge_text, font=fnt_b, fill=COLOR_TEXT_WHITE)
 
     # Company name
     comp_fnt, comp_lines = get_best_fit_font(draw, company, content_w - 80, 100, start_size=56, min_size=36, bold=True, max_lines=1)
     comp_tw = draw.textbbox((0, 0), comp_lines[0], font=comp_fnt)[2]
-    draw.text(((CW - comp_tw) // 2, card_top + 356), comp_lines[0], font=comp_fnt, fill=COLOR_ACCENT)
+    draw.text(((CW - comp_tw) // 2, card_top + 356), comp_lines[0], font=comp_fnt, fill=palette["accent"])
 
     # Role Title
     role_fnt, role_lines = get_best_fit_font(draw, role, content_w - 80, 140, start_size=42, min_size=28, bold=True, max_lines=2)
@@ -509,13 +557,13 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
         ("ELIGIBILITY", f"{exp} • Freshers Eligible", (76, 217, 100)),
         ("LOCATION", location, COLOR_TEXT_WHITE),
         ("PACKAGE / CTC", package, (255, 214, 10)),
-        ("APPLY MODE", "Official Company Portal", COLOR_ACCENT),
+        ("APPLY MODE", "Official Company Portal", palette["accent"]),
     ]
 
     specs_y = card_top + 610
     for label, val, col in specs:
         rounded_rect(draw, (margin_x + 36, specs_y, CW - margin_x - 36, specs_y + 110), 20, (30, 38, 58))
-        rounded_rect(draw, (margin_x + 36, specs_y, margin_x + 46, specs_y + 110), 6, COLOR_ACCENT)
+        rounded_rect(draw, (margin_x + 36, specs_y, margin_x + 46, specs_y + 110), 6, palette["accent"])
         draw.text((margin_x + 64, specs_y + 16), label, font=FONT_SMALL, fill=COLOR_TEXT_SUB)
         vfnt, vlines = get_best_fit_font(draw, val, content_w - 140, 50, start_size=28, min_size=20, bold=True, max_lines=1)
         draw.text((margin_x + 64, specs_y + 50), vlines[0], font=vfnt, fill=col)
@@ -524,13 +572,13 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
     # Skills Pill Tags
     draw.text((margin_x + 44, specs_y + 8), "KEY SKILLS & TECH STACK:", font=FONT_SMALL, fill=COLOR_TEXT_MUTED)
     skill_text = " • ".join(skills[:5])
-    rounded_rect(draw, (margin_x + 36, specs_y + 40, CW - margin_x - 36, specs_y + 106), 18, (20, 26, 40), outline=COLOR_ACCENT, width=1)
+    rounded_rect(draw, (margin_x + 36, specs_y + 40, CW - margin_x - 36, specs_y + 106), 18, (20, 26, 40), outline=palette["accent"], width=1)
     sfnt, slines = get_best_fit_font(draw, skill_text, content_w - 120, 48, start_size=24, min_size=18, bold=False, max_lines=1)
-    draw.text((margin_x + 56, specs_y + 62), slines[0], font=sfnt, fill=COLOR_ACCENT)
+    draw.text((margin_x + 56, specs_y + 62), slines[0], font=sfnt, fill=palette["accent"])
 
     # Bottom Save CTA
     cta_y = card_top + card_h - 136
-    rounded_rect(draw, (margin_x + 36, cta_y, CW - margin_x - 36, cta_y + 92), 24, COLOR_ACCENT_ORANGE)
+    rounded_rect(draw, (margin_x + 36, cta_y, CW - margin_x - 36, cta_y + 92), 24, palette["accent_sub"])
     draw.text(((CW - draw.textbbox((0, 0), "💾 TAP SAVE — Direct Link In Pinned Comment 👇", font=FONT_BODY)[2]) // 2, cta_y + 28), "💾 TAP SAVE — Direct Link In Pinned Comment 👇", font=FONT_BODY, fill=COLOR_TEXT_WHITE)
 
     # Footer notes
@@ -538,6 +586,7 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
     draw.text((margin_x + 10, CH - 36), CHANNEL_FOOTER_NOTE, font=FONT_SMALL, fill=COLOR_TEXT_MUTED)
 
     return img
+
 
 
 def render_multi_scene_video(
@@ -844,11 +893,11 @@ def main() -> int:
     reel_id = reel["reel_id"]
     print(f"Next reel: #{reel_id} — {reel.get('title')!r}")
 
-    avatar_url = reel.get("avatar_cover_url") or reel.get("cover_url")
-    
-    # 100% local generation on worker — zero network download required!
-    print("Generating 1080x1920 job content card locally on worker...")
+    # 100% local generation on worker with rotating face logos and palettes!
+    print(f"Generating unique 1080x1920 job content card locally on worker for reel #{reel_id}...")
     content_img = generate_local_content_cover(reel)
+    cover_file = f"cover-{reel_id}.jpg"
+    content_img.save(cover_file, "JPEG", quality=95)
 
     out = f"reel-{reel_id}.mp4"
     print("Rendering upgraded 20-second multi-scene dynamic reel with local face logo...")
@@ -856,18 +905,22 @@ def main() -> int:
     size = os.path.getsize(out)
     print(f"Rendered {out} ({size} bytes)")
 
-
     release_id = ensure_release()
-    asset_name = f"reel-{reel_id}-{int(time.time())}.mp4"
-    video_url = upload_asset(release_id, out, asset_name)
-    print(f"Uploaded: {video_url}")
-    cover_public_url = avatar_url or ""
+    ts = int(time.time())
+    asset_name = f"reel-{reel_id}-{ts}.mp4"
+    video_url = upload_asset(release_id, out, asset_name, content_type="video/mp4")
+    print(f"Uploaded video: {video_url}")
+
+    cover_asset_name = f"cover-{reel_id}-{ts}.jpg"
+    cover_public_url = upload_asset(release_id, cover_file, cover_asset_name, content_type="image/jpeg")
+    print(f"Uploaded unique cover: {cover_public_url}")
 
     prune_assets(release_id, KEEP_ASSETS)
 
     print("Publishing to Instagram via backend endpoints...")
     ig_status, media_id, msg = publish_via_backend(reel_id, video_url, cover_url=cover_public_url)
     print(f"IG result: status={ig_status} media_id={media_id} msg={msg}")
+
 
     _st, mark = backend_post("/api/cron/mark-published", {
         "reel_id": reel_id, "video_url": video_url,
