@@ -25,20 +25,19 @@ media bucket or bandwidth bill.
 
 The workflow has three triggers:
 
-- `schedule`: best-effort GitHub backup every 5 minutes, offset away from busy minute boundaries
+- `schedule`: best-effort GitHub backup every 15 minutes, offset away from busy minute boundaries
 - `repository_dispatch`: reliable trigger fired by the backend's `/api/cron/trigger-publish`
 - `workflow_dispatch`: manual "Run workflow" button
 
-The backend setting `post_interval_minutes` is authoritative and defaults to 10.
-It is safe for the workflow to trigger more often; extra runs simply skip when it
-is not time to post yet.
+The backend setting `post_interval_minutes` is authoritative and defaults to 15.
+Missed or manual extra runs cannot over-post.
 
 ## Cloudflare Cron Worker
 
 This repo also includes a Cloudflare Worker cron app:
 
 - `src/index.js`: scheduled handler that calls the backend trigger endpoint
-- `wrangler.toml`: cron schedule, currently every 5 minutes
+- `wrangler.toml`: cron schedule, currently every 15 minutes
 
 Configure these Cloudflare variables:
 

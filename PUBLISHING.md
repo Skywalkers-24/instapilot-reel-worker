@@ -11,14 +11,14 @@ workflow can show a scheduled run much later than expected.
 The `Publish Reel` workflow (`.github/workflows/publish-reel.yml`) has three
 triggers:
 
-- `schedule`: best-effort GitHub backup every 5 minutes
+- `schedule`: best-effort GitHub backup every 15 minutes
 - `repository_dispatch` type `publish-reel`: the reliable path, fired via API
 - `workflow_dispatch`: the manual "Run workflow" button
 
 Each run builds the next reel, renders the MP4, publishes through the backend's
 thin Instagram endpoints, and reports the outcome. The backend cadence gate
-(`post_interval_minutes`, default 10) is authoritative. Triggering every 5
-minutes is safe because extra runs return a skip when it is not time to post.
+(`post_interval_minutes`, default 15) is authoritative. Missed or manual extra
+runs cannot over-post.
 
 ## Best setup: Cloudflare Worker cron -> backend -> repository_dispatch
 
@@ -32,7 +32,7 @@ Deploy it from the `worker` repo and configure these Cloudflare variables:
 - `BACKEND_URL`: your backend base URL, for example `https://<your-backend>`
 - `CRON_SECRET`: the same secret configured on the backend
 
-The Worker runs every 5 minutes and calls:
+The Worker runs every 15 minutes and calls:
 
 `POST {BACKEND_URL}/api/cron/trigger-publish`
 
@@ -52,8 +52,8 @@ custom header, or a paid platform cron.
 - `CRON_SECRET`: the same secret sent by the external cron and configured in the
   worker repo's Actions secrets
 
-Once these are set, the worker is kicked reliably every 5 minutes, and the
-backend keeps actual Instagram posting to roughly every 10 minutes.
+Once these are set, the worker is kicked every 15 minutes, and the backend keeps
+actual Instagram posting to roughly every 15 minutes.
 
 ## Manual test
 
