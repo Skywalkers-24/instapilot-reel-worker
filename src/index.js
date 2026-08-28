@@ -115,7 +115,7 @@ export default {
       worker: "instapilot-reel-worker",
       status: "online",
       schedules: [
-        { name: "Reel Publish", cron: "*/15 * * * *", frequency: "Every 15 minutes" },
+        { name: "Reel Publish", cron: "0,22,45 0-18 * * *", frequency: "48 Reels / Day (6:00 AM - 12:00 AM Midnight IST)" },
         { name: "Job Scraping", cron: "30 0,10 * * *", frequency: "6:00 AM & 4:00 PM IST (00:30 & 10:30 UTC)" },
       ],
       configured: {
@@ -128,6 +128,7 @@ export default {
         scheduled_test: `${url.origin}/__scheduled`,
         health: `${url.origin}/health`,
       },
+
       timestamp: new Date().toISOString(),
     };
 
