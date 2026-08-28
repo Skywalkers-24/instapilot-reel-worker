@@ -2,11 +2,11 @@ name: Publish Reel
 
 on:
   schedule:
-    # Best-effort backup only — GitHub's scheduler is throttled/unreliable for
-    # short intervals and often skips ticks. The reliable trigger is an external
-    # cron hitting the backend's /api/cron/trigger-publish, which fires the
-    # repository_dispatch below. The backend cadence gate keeps posting to ~10 min.
-    - cron: '*/10 * * * *'
+    # Best-effort backup only. GitHub's scheduler is throttled/unreliable for
+    # short intervals and often skips ticks. This fires every 5 minutes as a
+    # stronger safety net; the backend cadence gate keeps posting to ~10 min.
+    # Offset the minutes away from :00/:10/etc, which are busier.
+    - cron: '3,8,13,18,23,28,33,38,43,48,53,58 * * * *'
   repository_dispatch:
     types: [publish-reel]     # fired by the backend (reliable external cron)
   workflow_dispatch:          # manual "Run workflow" button
@@ -53,8 +53,8 @@ jobs:
       - name: Put ffmpeg on PATH
         run: echo "$HOME/ffmpeg-static" >> "$GITHUB_PATH"
 
-      # Single loop: the script builds the next reel (cadence-gated) → renders
-      # the MP4 → publishes via the thin backend endpoints → reports the outcome.
+      # Single loop: the script builds the next reel (cadence-gated), renders
+      # the MP4, publishes via the thin backend endpoints, and reports outcome.
       - name: Build + render + publish
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}

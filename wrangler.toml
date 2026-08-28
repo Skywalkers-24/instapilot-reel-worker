@@ -1,0 +1,8 @@
+name = "instapilot-reel-publish-cron"
+main = "src/index.js"
+compatibility_date = "2026-08-28"
+
+[triggers]
+# Trigger more often than the publish cadence. The backend's post_interval_minutes
+# setting remains authoritative, so extra calls safely skip when it is too early.
+crons = ["*/5 * * * *"]
