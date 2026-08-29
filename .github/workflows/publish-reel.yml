@@ -1,9 +1,17 @@
 name: Publish Reel
 
 on:
+  schedule:
+    - cron: '*/15 * * * *'
   repository_dispatch:
     types: [publish-reel]     # fired by the backend after Cloudflare cron calls it
   workflow_dispatch:          # manual "Run workflow" button
+    inputs:
+      force_publish:
+        description: "Bypass backend cadence gate for manual testing"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: publish-reel
@@ -64,4 +72,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: reel-media
           KEEP_ASSETS: '5'
+          REEL_SECONDS: '12'
+          FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
         run: python scripts/publish_reel.py

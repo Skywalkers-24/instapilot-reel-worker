@@ -23,7 +23,7 @@ export default {
 
     // Determine event type based on cron expression:
     // "30 0,10 * * *" -> Scrape Jobs (6:00 AM & 4:00 PM IST)
-    // "0 * * * *" -> Publish Reel (1 reel every hour)
+    // "*/15 * * * *" -> Publish Reel (backend cadence-gated)
     const isJobScrape =
       cronPattern === "30 0,10 * * *" ||
       cronPattern === "30 10 * * *" ||
@@ -115,7 +115,7 @@ export default {
       worker: "instapilot-reel-worker",
       status: "online",
       schedules: [
-        { name: "Reel Publish", cron: "*/30 0-6 * * *", frequency: "Every 30 min (6:00 AM - 12:00 PM IST, Max 10 Reels / Day)" },
+        { name: "Reel Publish", cron: "*/15 * * * *", frequency: "Every 15 min, backend cadence-gated" },
         { name: "Job Scraping", cron: "30 0,10 * * *", frequency: "6:00 AM & 4:00 PM IST (00:30 & 10:30 UTC)" },
       ],
       configured: {

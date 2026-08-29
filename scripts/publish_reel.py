@@ -37,7 +37,8 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPOSITORY", "")  # owner/repo
 RELEASE_TAG = os.getenv("RELEASE_TAG", "reel-media")
 KEEP_ASSETS = int(os.getenv("KEEP_ASSETS", "5"))
-REEL_SECONDS = float(os.getenv("REEL_SECONDS", "18.0"))
+REEL_SECONDS = min(float(os.getenv("REEL_SECONDS", "12.0")), 12.0)
+FORCE_PUBLISH = os.getenv("FORCE_PUBLISH", "").strip().lower() in {"1", "true", "yes", "on"}
 
 POLL_MAX = int(os.getenv("POLL_MAX", "12"))
 POLL_INTERVAL = float(os.getenv("POLL_INTERVAL", "8"))
@@ -627,6 +628,7 @@ def render_multi_scene_video(
     Renders high-definition motion reel with authentic human-curated editorial scenes.
     Eliminates robotic AI voice and fake bot spam scripts.
     """
+    duration = min(float(duration or REEL_SECONDS), 12.0)
     ffmpeg_bin = get_ffmpeg_exe()
     company = (reel_info.get("company") or "Top Tech Company").strip()
     role = (reel_info.get("role") or reel_info.get("title") or "Software Engineer").strip()
@@ -954,13 +956,16 @@ def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "", audio
 
 
 def main() -> int:
-    st, build = backend_post("/api/cron/auto-post", {"force": True})
+    st, build = backend_post("/api/cron/auto-post", {"force": FORCE_PUBLISH})
     if st == 200:
         print(f"auto-post: {build.get('status')} reel_id={build.get('reel_id')}")
     else:
         print(f"auto-post HTTP {st}: {build}")
+    if isinstance(build, dict) and build.get("status") == "SKIPPED_CADENCE":
+        print(f"Cadence gate active: {build.get('reason')}")
+        return 0
 
-    status, data = backend_post("/api/cron/next-reel", {"force": True})
+    status, data = backend_post("/api/cron/next-reel", {"force": FORCE_PUBLISH})
     if status != 200:
         print(f"next-reel failed: {status} {data}")
         return 1

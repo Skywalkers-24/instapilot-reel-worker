@@ -14,8 +14,9 @@ triggers:
 - `repository_dispatch` type `publish-reel`: the reliable path, fired via API
 - `workflow_dispatch`: the manual "Run workflow" button
 
-GitHub Actions does not run its own cron. Cloudflare owns the schedule, calls
-the backend, and the backend fires `repository_dispatch`.
+Cloudflare owns the reliable schedule, calls the backend, and the backend fires
+`repository_dispatch`. GitHub Actions also has a 15-minute backup schedule, but
+Cloudflare remains the preferred clock.
 
 Each run builds the next reel, renders the MP4, publishes through the backend's
 thin Instagram endpoints, and reports the outcome. The backend cadence gate
@@ -34,7 +35,8 @@ Deploy it from the `worker` repo and configure these Cloudflare variables:
 - `BACKEND_URL`: your backend base URL, for example `https://<your-backend>`
 - `CRON_SECRET`: the same secret configured on the backend
 
-The Worker runs every 15 minutes and calls:
+The Worker and backup GitHub Actions schedule both run every 15 minutes. The
+Worker calls:
 
 `POST {BACKEND_URL}/api/cron/trigger-publish`
 

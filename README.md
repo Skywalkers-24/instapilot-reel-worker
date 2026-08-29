@@ -13,7 +13,7 @@ Every trigger (scheduled backup, external dispatch, or manual run),
 1. `POST {BACKEND_URL}/api/cron/auto-post` to build the next cadence-eligible reel
 2. `POST {BACKEND_URL}/api/cron/next-reel` to get the next reel's `cover_url` and caption
 3. Downloads the cover image rendered by the backend
-4. Renders a 1080x1920 / 30s MP4 from the cover with FFmpeg
+4. Renders a 1080x1920 / max 12s MP4 from the cover with FFmpeg
 5. Uploads the MP4 to this repo's `reel-media` GitHub Release for a public download URL
 6. Prunes old release assets, keeping only the newest 5
 7. Publishes through the backend's thin Instagram endpoints
@@ -25,11 +25,12 @@ media bucket or bandwidth bill.
 
 The workflow has three triggers:
 
+- `schedule`: every 15 minutes as a GitHub Actions backup trigger
 - `repository_dispatch`: reliable trigger fired by the backend's `/api/cron/trigger-publish`
 - `workflow_dispatch`: manual "Run workflow" button
 
 The backend setting `post_interval_minutes` is authoritative and defaults to 15.
-Missed or manual extra runs cannot over-post.
+Scheduled extra runs exit cleanly when the cadence gate is active.
 
 ## Cloudflare Cron Worker
 
@@ -47,7 +48,7 @@ Configure these Cloudflare variables:
 
 The Cloudflare Worker calls `POST {BACKEND_URL}/api/cron/trigger-publish`, and
 the backend fires the `repository_dispatch` event for the GitHub Actions worker.
-GitHub Actions does not run its own cron; Cloudflare owns the schedule.
+GitHub Actions also has a 15-minute backup schedule.
 
 ## Required GitHub Secrets
 
