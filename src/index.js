@@ -115,7 +115,7 @@ export default {
       worker: "instapilot-reel-worker",
       status: "online",
       schedules: [
-        { name: "Reel Publish", cron: "0 * * * *", frequency: "1 Reel Every Hour (24 Reels / Day max)" },
+        { name: "Reel Publish", cron: "*/30 0-6 * * *", frequency: "Every 30 min (6:00 AM - 12:00 PM IST, Max 10 Reels / Day)" },
         { name: "Job Scraping", cron: "30 0,10 * * *", frequency: "6:00 AM & 4:00 PM IST (00:30 & 10:30 UTC)" },
       ],
       configured: {
