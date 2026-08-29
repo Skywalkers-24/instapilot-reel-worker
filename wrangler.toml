@@ -3,8 +3,7 @@ main = "src/index.js"
 compatibility_date = "2026-08-28"
 
 [triggers]
-# 1. Reel Publish: every 15 minutes, 24x7. Backend cadence/settings decide
-#    whether a trigger actually publishes or exits cleanly.
+# 1. Reel Publish: Fires every 15 minutes ("*/15 * * * *")
 # 2. Job Scraping: 6:00 AM IST (00:30 UTC) & 4:00 PM IST (10:30 UTC)
 crons = [
   "*/15 * * * *",

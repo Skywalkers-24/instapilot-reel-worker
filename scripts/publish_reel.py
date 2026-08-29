@@ -617,6 +617,151 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
     return img
 
 
+def generate_local_avatar_cover(reel_info: dict) -> Image.Image:
+    """Generate high-impact 1080x1920 HD Full Avatar cover with clean editorial branding."""
+    CW, CH = 1080, 1920
+    SAFE_MARGIN_X = 64
+    CONTENT_WIDTH = CW - SAFE_MARGIN_X * 2
+
+    reel_id = reel_info.get("reel_id")
+    palette = get_theme_palette(reel_id)
+
+    bg_rgb = palette["bg_top"]
+    accent_rgb = palette["accent"]
+    card_bg_rgb = palette["card_bg"]
+    card_border_rgb = (255, 255, 255, 40)
+    text_primary_rgb = (255, 255, 255)
+    text_muted_rgb = (148, 163, 184)
+
+    company = (reel_info.get("company") or "Top Tech Company").strip()
+    role = (reel_info.get("role") or reel_info.get("title") or "Software Engineer").strip()
+    location = (reel_info.get("location") or "India (Hybrid / Remote)").strip()
+    exp = (reel_info.get("experience_label") or "0-3 Years Exp").strip()
+    package = (reel_info.get("salary_text") or "Competitive CTC").strip()
+    avatar_name = reel_info.get("avatar_name") or ""
+
+    comp_lower = company.lower()
+    loc_lower = location.lower()
+    if any(m in comp_lower for m in ["google", "microsoft", "amazon", "apple", "meta", "adobe", "rubrik", "cisco", "oracle", "nvidia"]):
+        series_badge = "TIER-1 TECH OPENING"
+    elif any(r in loc_lower for r in ["remote", "work from home", "anywhere"]):
+        series_badge = "100% REMOTE TECH JOB"
+    elif any(s in package for s in ["20", "25", "30", "35", "40", "45", "50", "55", "60", "LPA"]):
+        series_badge = "HIGH-PAYING TECH DRIVE"
+    elif any(f in exp.lower() for f in ["0-", "fresher", "intern", "entry"]):
+        series_badge = "EARLY CAREER / FRESHER DRIVE"
+    else:
+        series_badge = "VERIFIED CAREERS OPENING"
+
+    badge_text = series_badge
+
+    top_bg = _mix(bg_rgb, (255, 255, 255), 0.08)
+    base = _vertical_gradient(CW, CH, top_bg, bg_rgb).convert("RGBA")
+    glow = _radial_glow(CW, CH, accent_rgb, center=(CW // 2, 900), radius=620, max_alpha=70)
+    img = Image.alpha_composite(base, glow).convert("RGB")
+
+    # 1. Neon Accent Top Bar
+    draw = ImageDraw.Draw(img)
+    draw.rectangle((0, 0, CW, 10), fill=accent_rgb)
+
+    # 2. Prominent Full Avatar Hero Stage
+    avatar_file = resolve_local_avatar_file(avatar_name, reel_id)
+    if avatar_file and avatar_file.exists():
+        try:
+            av_src = Image.open(avatar_file)
+            has_alpha = av_src.mode == "RGBA" and av_src.getchannel("A").getextrema()[0] < 255
+            if has_alpha:
+                ratio = min((CW - 80) / av_src.width, 1300 / av_src.height)
+                nw, nh = max(1, int(av_src.width * ratio)), max(1, int(av_src.height * ratio))
+                fig = av_src.resize((nw, nh), Image.Resampling.LANCZOS)
+                px = (CW - nw) // 2
+                py = 280 + (1300 - nh) // 2
+                shadow = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
+                sh = fig.split()[3].point(lambda a: int(a * 0.45))
+                shadow.paste((0, 0, 0, 255), (px, py + 16), mask=sh)
+                shadow = shadow.filter(ImageFilter.GaussianBlur(30))
+                base_rgba = Image.alpha_composite(img.convert("RGBA"), shadow)
+                base_rgba.paste(fig, (px, py), mask=fig)
+                img = base_rgba.convert("RGB")
+            else:
+                AV_TOP = 220
+                AV_HEIGHT = 1280
+                cover = ImageOps.fit(
+                    av_src.convert("RGB"), (CW, AV_HEIGHT),
+                    method=Image.Resampling.LANCZOS, centering=(0.5, 0.26),
+                )
+                img.paste(cover, (0, AV_TOP))
+                top_fade = _top_fade(CW, bg_rgb, start_y=0, fade_len=160, max_alpha=255)
+                img.paste(top_fade, (0, AV_TOP), mask=top_fade)
+        except Exception as e:
+            print(f"Full avatar stage error: {e}")
+
+    # 3. Top Header Bar & Channel Identity
+    draw = ImageDraw.Draw(img)
+    top_y = 68
+    face_logo = resolve_local_face_logo(avatar_name, reel_id)
+    face_sm = face_logo.resize((84, 84), Image.Resampling.LANCZOS)
+    draw.rounded_rectangle((SAFE_MARGIN_X, top_y - 2, SAFE_MARGIN_X + 88, top_y + 86), radius=22, fill="#ffffff", outline=card_border_rgb, width=2)
+    img.paste(face_sm, (SAFE_MARGIN_X + 2, top_y), face_sm)
+    draw = ImageDraw.Draw(img)
+
+    draw.text((SAFE_MARGIN_X + 104, top_y + 6), CHANNEL_DISPLAY_NAME, font=get_font(32, bold=True), fill=text_primary_rgb)
+    draw.text((SAFE_MARGIN_X + 104, top_y + 46), CHANNEL_TAGLINE, font=get_font(20, bold=False), fill=text_muted_rgb)
+
+    # 4. Top Series Badge Pill
+    badge_font = get_font(24, bold=True)
+    bbox = draw.textbbox((0, 0), badge_text, font=badge_font)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    pw, ph = tw + 20 * 2, th + 8 * 2
+    badge_x = CW - SAFE_MARGIN_X - pw
+    draw.rounded_rectangle((badge_x, top_y + 12, badge_x + pw, top_y + 12 + ph), radius=16, fill=accent_rgb)
+    draw.text((badge_x + 20, top_y + 12 + 8 - bbox[1]), badge_text, font=badge_font, fill=bg_rgb)
+
+    # 5. Bottom Scrim & Hero Information Card
+    scrim = _bottom_scrim(CW, CH, bg_rgb, start_y=1120, full_y=1640, max_alpha=255)
+    img = Image.alpha_composite(img.convert("RGBA"), scrim).convert("RGB")
+    draw = ImageDraw.Draw(img)
+
+    # Company & Role Banner
+    info_card_y = 1240
+    draw.text((SAFE_MARGIN_X, info_card_y), company.upper(), font=get_font(52, bold=True), fill=accent_rgb)
+    draw.text((SAFE_MARGIN_X, info_card_y + 68), "IS HIRING NOW", font=get_font(24, bold=True), fill=text_muted_rgb)
+
+    role_fnt, role_lines = get_best_fit_font(draw, role.upper(), CONTENT_WIDTH, 110, start_size=42, min_size=28, bold=True, max_lines=2)
+    role_y = info_card_y + 106
+    for line in role_lines[:2]:
+        draw.text((SAFE_MARGIN_X, role_y), line, font=role_fnt, fill=text_primary_rgb)
+        role_y += draw.textbbox((0, 0), line, font=role_fnt)[3] + 8
+
+    # 3-Segment Specs Pill
+    pill_top, pill_h = 1530, 84
+    pill_box = (SAFE_MARGIN_X, pill_top, SAFE_MARGIN_X + CONTENT_WIDTH, pill_top + pill_h)
+    draw.rounded_rectangle(pill_box, radius=20, fill=card_bg_rgb, outline=card_border_rgb, width=2)
+    seg = CONTENT_WIDTH // 3
+    _draw_centered_text(draw, (pill_box[0], pill_top, pill_box[0] + seg, pill_top + pill_h), exp.upper(), 22, accent_rgb)
+    _draw_centered_text(draw, (pill_box[0] + seg, pill_top, pill_box[0] + 2 * seg, pill_top + pill_h), "OFFICIAL APPLY LINK", 22, text_primary_rgb)
+    _draw_centered_text(draw, (pill_box[0] + 2 * seg, pill_top, pill_box[2], pill_top + pill_h), "VERIFIED OPENING", 22, text_muted_rgb)
+    for k in (1, 2):
+        dx = pill_box[0] + seg * k
+        draw.line((dx, pill_top + 18, dx, pill_top + pill_h - 18), fill=card_border_rgb, width=2)
+
+    # Big Converting CTA Button
+    cta_top, cta_h = 1646, 156
+    draw.rounded_rectangle((SAFE_MARGIN_X, cta_top, SAFE_MARGIN_X + CONTENT_WIDTH, cta_top + cta_h), radius=28, fill=accent_rgb)
+    cta_str = "APPLY LINK IN 1ST PINNED COMMENT  →"
+    _draw_centered_text(draw, (SAFE_MARGIN_X, cta_top, SAFE_MARGIN_X + CONTENT_WIDTH, cta_top + cta_h), cta_str, 38, bg_rgb)
+
+    # Footer source & legal notes
+    font_src = get_font(14, bold=True)
+    font_legal = get_font(12, bold=False)
+    draw.text((SAFE_MARGIN_X, CH - 40), f"Source: {company} Careers Portal", font=font_src, fill=text_muted_rgb)
+    legal_text = "Trademarks belong to their respective owners."
+    l_w = draw.textbbox((0, 0), legal_text, font=font_legal)[2]
+    draw.text((CW - SAFE_MARGIN_X - l_w, CH - 40), legal_text, font=font_legal, fill=(80, 100, 130))
+
+    return img
+
+
 def render_multi_scene_video(
     reel_info: dict,
     content_img_or_path: Image.Image | str,
@@ -1008,8 +1153,18 @@ def main() -> int:
 
     print(f"Generating unique 1080x1920 job content card locally on worker for reel #{reel_id}...")
     content_img = generate_local_content_cover(reel)
+
+    # Alternate thumbnail image between Scene 1 (content card) and Full Avatar cover
+    use_avatar_cover = (int(reel_id or 0) % 2 == 1)
+    if use_avatar_cover:
+        print(f"Generating unique 1080x1920 FULL AVATAR cover for reel #{reel_id} (alternating thumbnail mode)...")
+        cover_img = generate_local_avatar_cover(reel)
+    else:
+        print(f"Generating unique 1080x1920 SCENE 1 / CONTENT cover for reel #{reel_id} (alternating thumbnail mode)...")
+        cover_img = content_img
+
     cover_file = f"cover-{reel_id}.jpg"
-    content_img.save(cover_file, "JPEG", quality=95)
+    cover_img.save(cover_file, "JPEG", quality=95)
 
     out = f"reel-{reel_id}.mp4"
     print("Rendering clean human-editorial multi-scene dynamic reel...")
