@@ -36,6 +36,11 @@ TRENDING_URL = os.getenv("TRENDING_URL", "https://instagram-trending.snaplytics.
 _AID = re.compile(r'\\*"audioId\\*"\s*:\s*\\*"(?P<aid>\d+)\\*"')
 _TITLE = re.compile(r'\\*"title\\*"\s*:\s*\\*"(?P<v>(?:[^"\\]|\\.)*?)\\*"')
 _ARTIST = re.compile(r'\\*"artist\\*"\s*:\s*\\*"(?P<v>(?:[^"\\]|\\.)*?)\\*"')
+# Each song object also inlines a direct CDN audio stream URL (an .mp4 with an
+# AAC audio track). The runner downloads this, skips the first 10s and merges it
+# into the reel video. The URL body has no literal quotes; it ends at the next
+# escaped closing quote (tolerating the double-escaped \" form).
+_AUDIOURL = re.compile(r'\\*"audioUrl\\*"\s*:\s*\\*"(?P<v>(?:\\.|[^"])*?)\\+"')
 
 
 def _unescape(s: str) -> str:
@@ -59,14 +64,18 @@ def parse_songs(html: str) -> list[dict]:
         if aid in seen:
             continue
         seen.add(aid)
-        # title/artist follow the audioId within the same small object window.
+        # title/artist/audioUrl follow the audioId within the same object window.
+        # audioUrl sits after the (long) coverArt URL, so use a wide window.
         window = html[m.end():m.end() + 400]
+        url_window = html[m.end():m.end() + 2000]
         tm = _TITLE.search(window)
         am = _ARTIST.search(window)
+        um = _AUDIOURL.search(url_window)
         songs.append({
             "audio_id": aid,
             "title": _unescape(tm.group("v")) if tm else "",
             "artist": _unescape(am.group("v")) if am else "",
+            "audio_url": _unescape(um.group("v")) if um else "",
         })
     return songs
 
@@ -97,7 +106,8 @@ def main() -> int:
     songs = parse_songs(html)[:15]
     print(f"Parsed {len(songs)} trending songs (strictly capped to top 15).")
     for s in songs:
-        print(f"  - {s['audio_id']}: {s['title']} — {s['artist']}")
+        has_url = "url" if s.get("audio_url") else "no-url"
+        print(f"  - {s['audio_id']}: {s['title']} — {s['artist']} [{has_url}]")
     if not songs:
         print("No songs parsed — the page structure may have changed.")
         return 1

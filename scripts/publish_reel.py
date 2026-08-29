@@ -903,12 +903,14 @@ def render_multi_scene_video(
         print(f"  [FFMPEG SUCCESS] Rendered MP4 output: {out_path} ({out_sz} bytes)")
 
 
-def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "", audio_id: str = "") -> tuple[str, str, str]:
+def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "", audio_id: str = "", audio_label: str = "") -> tuple[str, str, str]:
     payload = {"reel_id": reel_id, "video_url": video_url}
     if cover_url:
         payload["cover_url"] = cover_url
     if audio_id:
         payload["audio_id"] = audio_id
+    if audio_label:
+        payload["audio_label"] = audio_label
     st, data = backend_post("/api/cron/ig/create-container", payload)
     if st != 200:
         return "ERROR", "", f"create-container HTTP {st}: {data}"
@@ -989,6 +991,12 @@ def main() -> int:
         except Exception as exc:
             print(f"  Audio download notice: {exc}; falling back cleanly")
 
+    if not audio_file_path:
+        local_fallback = Path(__file__).resolve().parent.parent / "assets" / "audio" / "upbeat_tech_1.wav"
+        if local_fallback.exists() and local_fallback.stat().st_size > 1000:
+            audio_file_path = local_fallback
+            print(f"  Using bundled upbeat tech background music: {local_fallback.name} ({local_fallback.stat().st_size} bytes)")
+
     print(f"Generating unique 1080x1920 job content card locally on worker for reel #{reel_id}...")
     content_img = generate_local_content_cover(reel)
     cover_file = f"cover-{reel_id}.jpg"
@@ -1013,7 +1021,7 @@ def main() -> int:
     prune_assets(release_id, KEEP_ASSETS)
 
     print("Publishing to Instagram via backend endpoints...")
-    ig_status, media_id, msg = publish_via_backend(reel_id, video_url, cover_url=cover_public_url, audio_id=audio_id)
+    ig_status, media_id, msg = publish_via_backend(reel_id, video_url, cover_url=cover_public_url, audio_id=audio_id, audio_label=audio_label)
     print(f"IG result: status={ig_status} media_id={media_id} msg={msg}")
 
     _st, mark = backend_post("/api/cron/mark-published", {
