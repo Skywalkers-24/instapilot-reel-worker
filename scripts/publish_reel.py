@@ -859,13 +859,26 @@ def render_multi_scene_video(
             f_img.save(frame_dir / f"frame_{i:04d}.png", "PNG")
 
         tmp_out = frame_dir / "out.mp4"
+        if audio_file and os.path.exists(str(audio_file)) and os.path.getsize(str(audio_file)) > 1000:
+            fade_start = max(0.0, duration - 1.0)
+            audio_inputs = [
+                "-ss", "10",
+                "-t", str(duration),
+                "-i", str(audio_file),
+                "-af", f"afade=t=out:st={fade_start:.1f}:d=1.0",
+            ]
+        else:
+            audio_inputs = [
+                "-f", "lavfi",
+                "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
+            ]
+
         cmd = [
             ffmpeg_bin,
             "-y",
             "-framerate", str(FPS),
             "-i", str(frame_dir / "frame_%04d.png"),
-            "-f", "lavfi",
-            "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
+            *audio_inputs,
             "-map", "0:v:0",
             "-map", "1:a:0",
             "-c:v", "libx264",
@@ -889,10 +902,12 @@ def render_multi_scene_video(
         print(f"  [FFMPEG SUCCESS] Rendered MP4 output: {out_path} ({out_sz} bytes)")
 
 
-def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "") -> tuple[str, str, str]:
+def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "", audio_id: str = "") -> tuple[str, str, str]:
     payload = {"reel_id": reel_id, "video_url": video_url}
     if cover_url:
         payload["cover_url"] = cover_url
+    if audio_id:
+        payload["audio_id"] = audio_id
     st, data = backend_post("/api/cron/ig/create-container", payload)
     if st != 200:
         return "ERROR", "", f"create-container HTTP {st}: {data}"
@@ -954,6 +969,25 @@ def main() -> int:
     reel_id = reel["reel_id"]
     print(f"Next reel: #{reel_id} — {reel.get('title')!r}")
 
+    # 1. Download official trending audio preview from Instagram Audio API if download_url is available
+    audio_file_path = None
+    audio_url = reel.get("audio_download_url") or ""
+    audio_id = reel.get("audio_id") or ""
+    audio_label = reel.get("audio_label") or ""
+
+    if audio_url:
+        try:
+            print(f"Downloading trending audio preview ({audio_label or audio_id}) from Instagram...")
+            req = urllib.request.Request(audio_url, headers={"User-Agent": "Mozilla/5.0"})
+            tmp_audio = f"/tmp/audio_{reel_id}.m4a" if os.path.exists("/tmp") else f"audio_{reel_id}.m4a"
+            with urllib.request.urlopen(req, timeout=15) as resp, open(tmp_audio, "wb") as f:
+                f.write(resp.read())
+            if os.path.exists(tmp_audio) and os.path.getsize(tmp_audio) > 1000:
+                audio_file_path = Path(tmp_audio)
+                print(f"  Downloaded audio ({os.path.getsize(audio_file_path)} bytes) — fast-forward 10s with fade-out")
+        except Exception as exc:
+            print(f"  Audio download notice: {exc}; falling back cleanly")
+
     print(f"Generating unique 1080x1920 job content card locally on worker for reel #{reel_id}...")
     content_img = generate_local_content_cover(reel)
     cover_file = f"cover-{reel_id}.jpg"
@@ -961,7 +995,7 @@ def main() -> int:
 
     out = f"reel-{reel_id}.mp4"
     print("Rendering clean human-editorial multi-scene dynamic reel...")
-    render_multi_scene_video(reel, content_img, out)
+    render_multi_scene_video(reel, content_img, out, audio_file=audio_file_path)
     size = os.path.getsize(out)
     print(f"Rendered {out} ({size} bytes)")
 
@@ -978,7 +1012,7 @@ def main() -> int:
     prune_assets(release_id, KEEP_ASSETS)
 
     print("Publishing to Instagram via backend endpoints...")
-    ig_status, media_id, msg = publish_via_backend(reel_id, video_url, cover_url=cover_public_url)
+    ig_status, media_id, msg = publish_via_backend(reel_id, video_url, cover_url=cover_public_url, audio_id=audio_id)
     print(f"IG result: status={ig_status} media_id={media_id} msg={msg}")
 
     _st, mark = backend_post("/api/cron/mark-published", {
