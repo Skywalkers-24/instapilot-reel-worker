@@ -32,11 +32,11 @@ jobs:
           pip install -r requirements.txt
 
 
-      - name: Scrape top-200 companies on the runner (India freshers)
+      - name: Scrape all companies on the runner (India strict 0-3y freshers)
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          TOP_N: '200'
-          MAX_JOBS_PER_COMPANY: '3'
+          TOP_N: '2000'
+          MAX_JOBS_PER_COMPANY: '5'
           INGEST_BATCH: '40'
         run: python scripts/scrape_jobs.py
