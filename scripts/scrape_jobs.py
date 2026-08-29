@@ -51,6 +51,28 @@ def _backend(method: str, path: str, payload: dict | None = None):
 
 
 def fetch_companies() -> list[dict]:
+    """Load verified companies from local worker data/companies.json (fallback to backend if missing)."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(script_dir, "..", "data", "companies.json"),
+        os.path.join(script_dir, "data", "companies.json"),
+        os.path.abspath("data/companies.json"),
+        os.path.abspath("worker/data/companies.json"),
+    ]
+    for p in candidates:
+        if os.path.isfile(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    companies = json.load(f)
+                    print(f"Loaded {len(companies)} verified scrapable companies directly from {p}")
+                    if TOP_N and TOP_N < len(companies):
+                        return companies[:TOP_N]
+                    return companies
+            except Exception as exc:
+                print(f"Failed loading local {p}: {exc}")
+
+    # Fallback to backend API
+    print("Local companies.json not found; fetching from backend API...")
     status, data = _backend("GET", f"/api/cron/companies?top_n={TOP_N}")
     if status != 200:
         print(f"Companies fetch failed: HTTP {status} {data}")
