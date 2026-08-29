@@ -621,6 +621,7 @@ def render_multi_scene_video(
     content_img_or_path: Image.Image | str,
     out_path: str,
     duration: float = REEL_SECONDS,
+    audio_file: Path | str | None = None,
 ) -> None:
     """
     Renders high-definition motion reel with authentic human-curated editorial scenes.
