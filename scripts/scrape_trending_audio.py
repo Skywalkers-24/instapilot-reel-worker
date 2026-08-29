@@ -103,8 +103,8 @@ def main() -> int:
         print(f"Fetch failed: {e}")
         return 1
 
-    songs = parse_songs(html)[:15]
-    print(f"Parsed {len(songs)} trending songs (strictly capped to top 15).")
+    songs = parse_songs(html)[:30]
+    print(f"Parsed {len(songs)} trending songs (strictly capped to top 30).")
     for s in songs:
         has_url = "url" if s.get("audio_url") else "no-url"
         print(f"  - {s['audio_id']}: {s['title']} — {s['artist']} [{has_url}]")
