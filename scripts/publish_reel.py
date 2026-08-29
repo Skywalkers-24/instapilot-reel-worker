@@ -959,6 +959,8 @@ def main() -> int:
     st, build = backend_post("/api/cron/auto-post", {"force": FORCE_PUBLISH})
     if st == 200:
         print(f"auto-post: {build.get('status')} reel_id={build.get('reel_id')}")
+        if build.get("message") or build.get("reason"):
+            print(f"auto-post message: {build.get('message') or build.get('reason')}")
     else:
         print(f"auto-post HTTP {st}: {build}")
     if isinstance(build, dict) and build.get("status") == "SKIPPED_CADENCE":
@@ -971,6 +973,8 @@ def main() -> int:
         return 1
     reel = data.get("reel")
     if not reel:
+        if data.get("message"):
+            print(f"next-reel message: {data.get('message')}")
         print("No reel to publish. Done.")
         return 0
 
