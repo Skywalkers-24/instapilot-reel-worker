@@ -1126,19 +1126,18 @@ def main() -> int:
     reel_id = reel["reel_id"]
     print(f"Next reel: #{reel_id} — {reel.get('title')!r}")
 
-    # 1. Resolve the manual-audio track to ATTACH to the reel. We do NOT download
-    #    or merge any audio into the video: the reel is rendered with a silent
-    #    track and Instagram plays the attached audio_id at full volume
-    #    (audio_volume=100, video_volume=0, set backend-side). This avoids relying
-    #    on a download_url (Graph preview urls are gated/unavailable) and lets the
-    #    official trending sound drive the reel.
-    audio_file_path = None  # intentionally no merged audio for the manual-audio flow
+    # 1. Resolve the manual-audio track to ATTACH to the reel. The audio_id from
+    #    the manual_audio pool is attached to the IG container with the attached
+    #    track dominant (audio_volume=100, video_volume=1, set backend-side), so
+    #    Instagram plays the trending sound. No audio is downloaded or merged —
+    #    the reel is rendered with a silent track.
+    audio_file_path = None
     audio_id = reel.get("audio_id") or ""
     audio_label = reel.get("audio_label") or ""
 
     try:
         st_aud, aud = backend_post("/api/cron/manual-audio/resolve", {"audio_id": audio_id})
-        if st_aud == 200 and isinstance(aud, dict) and aud.get("status") in ("OK", "UNRESOLVED"):
+        if st_aud == 200 and isinstance(aud, dict) and aud.get("audio_id"):
             audio_id = aud.get("audio_id") or audio_id
             audio_label = aud.get("audio_label") or audio_label
             print(f"  manual audio to attach: {audio_label or audio_id}")
