@@ -4990,6 +4990,924 @@
     "source": "outscal/OpenJobs data/companies_v2.json"
   },
   {
+    "name": "Alcoa",
+    "website": "https://alcoa.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://alcoa.wd5.myworkdayjobs.com/careers"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Amgen",
+    "website": "https://amgen.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://amgen.wd1.myworkdayjobs.com/careers"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "CACI",
+    "website": "https://caci.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://caci.wd1.myworkdayjobs.com/External"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Catalent",
+    "website": "https://catalent.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://catalent.wd1.myworkdayjobs.com/External"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Choice Hotels",
+    "website": "https://choice-hotels.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://choicehotels.wd5.myworkdayjobs.com/External"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "ConocoPhillips",
+    "website": "https://conocophillips.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://conocophillips.wd1.myworkdayjobs.com/External"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Geico",
+    "website": "https://geico.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://geico.wd1.myworkdayjobs.com/External"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "LabCorp",
+    "website": "https://labcorp.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://labcorp.wd1.myworkdayjobs.com/External"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Regeneron",
+    "website": "https://regeneron.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://regeneron.wd1.myworkdayjobs.com/careers"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "State Street",
+    "website": "https://state-street.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://statestreet.wd1.myworkdayjobs.com/global"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "T-Mobile",
+    "website": "https://t-mobile.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://tmobile.wd1.myworkdayjobs.com/External"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Travelers",
+    "website": "https://travelers.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://travelers.wd5.myworkdayjobs.com/External"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Williams Companies",
+    "website": "https://williams-companies.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://williams.wd5.myworkdayjobs.com/External"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Xcel Energy",
+    "website": "https://xcel-energy.com",
+    "domain": "",
+    "ats_provider": "workday",
+    "source_urls": [
+      "https://xcelenergy.wd1.myworkdayjobs.com/External"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "2U",
+    "website": "https://2u.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/2u"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Affirm",
+    "website": "https://affirm.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/affirm"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "AlixPartners",
+    "website": "https://alixpartners.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/alixpartners"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Asana",
+    "website": "https://asana.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/asana"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Block",
+    "website": "https://block.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/block"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Coursera",
+    "website": "https://coursera.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/coursera"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Dropbox",
+    "website": "https://dropbox.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/dropbox"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Instacart",
+    "website": "https://instacart.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/instacart"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Khan Academy",
+    "website": "https://khan-academy.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/khanacademy"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Lucid Motors",
+    "website": "https://lucid-motors.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/lucidmotors"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Lyft",
+    "website": "https://lyft.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/lyft"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Marqeta",
+    "website": "https://marqeta.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/marqeta"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Medium",
+    "website": "https://medium.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/medium"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "PagerDuty",
+    "website": "https://pagerduty.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/pagerduty"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Point72",
+    "website": "https://point72.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/point72"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Smartsheet",
+    "website": "https://smartsheet.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/smartsheet"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "SoFi",
+    "website": "https://sofi.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/sofi"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Sweetgreen",
+    "website": "https://sweetgreen.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/sweetgreen"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Tripadvisor",
+    "website": "https://tripadvisor.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/tripadvisor"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Twilio",
+    "website": "https://twilio.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/twilio"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Vox Media",
+    "website": "https://vox-media.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/voxmedia"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "xAI",
+    "website": "https://xai.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/xai"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Elastic",
+    "website": "https://elastic.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/elastic"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Fastly",
+    "website": "https://fastly.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/fastly"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Netlify",
+    "website": "https://netlify.com",
+    "domain": "",
+    "ats_provider": "greenhouse",
+    "source_urls": [
+      "https://boards.greenhouse.io/netlify"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Palantir",
+    "website": "https://palantir.com",
+    "domain": "",
+    "ats_provider": "lever",
+    "source_urls": [
+      "https://jobs.lever.co/palantir"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Spotify",
+    "website": "https://spotify.com",
+    "domain": "",
+    "ats_provider": "lever",
+    "source_urls": [
+      "https://jobs.lever.co/spotify"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Notion",
+    "website": "https://notion.com",
+    "domain": "",
+    "ats_provider": "ashby",
+    "source_urls": [
+      "https://jobs.ashbyhq.com/notion"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Cohere",
+    "website": "https://cohere.com",
+    "domain": "",
+    "ats_provider": "ashby",
+    "source_urls": [
+      "https://jobs.ashbyhq.com/cohere"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Confluent",
+    "website": "https://confluent.com",
+    "domain": "",
+    "ats_provider": "ashby",
+    "source_urls": [
+      "https://jobs.ashbyhq.com/confluent"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Quora",
+    "website": "https://quora.com",
+    "domain": "",
+    "ats_provider": "ashby",
+    "source_urls": [
+      "https://jobs.ashbyhq.com/quora"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Hopper",
+    "website": "https://hopper.com",
+    "domain": "",
+    "ats_provider": "ashby",
+    "source_urls": [
+      "https://jobs.ashbyhq.com/hopper"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "AbbVie",
+    "website": "https://abbvie.com",
+    "domain": "",
+    "ats_provider": "smartrecruiters",
+    "source_urls": [
+      "https://jobs.smartrecruiters.com/abbvie"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Wise",
+    "website": "https://wise.com",
+    "domain": "",
+    "ats_provider": "smartrecruiters",
+    "source_urls": [
+      "https://jobs.smartrecruiters.com/wise"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Expeditors",
+    "website": "https://expeditors.com",
+    "domain": "",
+    "ats_provider": "smartrecruiters",
+    "source_urls": [
+      "https://jobs.smartrecruiters.com/expeditors"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Roland Berger",
+    "website": "https://roland-berger.com",
+    "domain": "",
+    "ats_provider": "smartrecruiters",
+    "source_urls": [
+      "https://jobs.smartrecruiters.com/rolandberger"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
+    "name": "Wynn Resorts",
+    "website": "https://wynn-resorts.com",
+    "domain": "",
+    "ats_provider": "smartrecruiters",
+    "source_urls": [
+      "https://jobs.smartrecruiters.com/wynnresorts"
+    ],
+    "ranking_tier": "standard",
+    "india_market_score": 140,
+    "countries": [
+      "India"
+    ],
+    "tech_stack": [],
+    "marketplace_categories": [],
+    "compensation_benchmark": {},
+    "source": "resumeai_state_of_ats_2026"
+  },
+  {
     "name": "BlackRock",
     "website": "http://www.blackrock.com",
     "domain": "blackrock.com",
