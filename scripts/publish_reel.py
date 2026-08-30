@@ -1132,9 +1132,25 @@ def main() -> int:
     audio_id = reel.get("audio_id") or ""
     audio_label = reel.get("audio_label") or ""
 
+    # Primary audio source: the manual_audio pool. Ask the backend to resolve a
+    # fresh, validated download_url on demand (Graph preview urls expire ~1.5d).
+    # If the specific audio_id from next-reel is known, resolve that exact track;
+    # otherwise let the backend pick the next available manual track.
+    try:
+        st_aud, aud = backend_post("/api/cron/manual-audio/resolve", {"audio_id": audio_id})
+        if st_aud == 200 and isinstance(aud, dict) and aud.get("status") == "OK":
+            audio_id = aud.get("audio_id") or audio_id
+            audio_url = aud.get("download_url") or audio_url
+            audio_label = aud.get("audio_label") or audio_label
+            print(f"  manual audio resolved: {audio_label or audio_id} (from {aud.get('resolved_from', 'db')})")
+        else:
+            print(f"  manual audio resolve: {aud.get('status') if isinstance(aud, dict) else st_aud}; using next-reel audio fields")
+    except Exception as exc:
+        print(f"  manual audio resolve notice: {exc}; using next-reel audio fields")
+
     if audio_url:
         try:
-            print(f"Downloading trending audio preview ({audio_label or audio_id}) from Instagram...")
+            print(f"Downloading manual audio preview ({audio_label or audio_id}) from Instagram...")
             req = urllib.request.Request(audio_url, headers={"User-Agent": "Mozilla/5.0"})
             tmp_audio = f"/tmp/audio_{reel_id}.m4a" if os.path.exists("/tmp") else f"audio_{reel_id}.m4a"
             with urllib.request.urlopen(req, timeout=15) as resp, open(tmp_audio, "wb") as f:
