@@ -1126,46 +1126,26 @@ def main() -> int:
     reel_id = reel["reel_id"]
     print(f"Next reel: #{reel_id} — {reel.get('title')!r}")
 
-    # 1. Download official trending audio preview from Instagram Audio API if download_url is available
-    audio_file_path = None
-    audio_url = reel.get("audio_download_url") or ""
+    # 1. Resolve the manual-audio track to ATTACH to the reel. We do NOT download
+    #    or merge any audio into the video: the reel is rendered with a silent
+    #    track and Instagram plays the attached audio_id at full volume
+    #    (audio_volume=100, video_volume=0, set backend-side). This avoids relying
+    #    on a download_url (Graph preview urls are gated/unavailable) and lets the
+    #    official trending sound drive the reel.
+    audio_file_path = None  # intentionally no merged audio for the manual-audio flow
     audio_id = reel.get("audio_id") or ""
     audio_label = reel.get("audio_label") or ""
 
-    # Primary audio source: the manual_audio pool. Ask the backend to resolve a
-    # fresh, validated download_url on demand (Graph preview urls expire ~1.5d).
-    # If the specific audio_id from next-reel is known, resolve that exact track;
-    # otherwise let the backend pick the next available manual track.
     try:
         st_aud, aud = backend_post("/api/cron/manual-audio/resolve", {"audio_id": audio_id})
-        if st_aud == 200 and isinstance(aud, dict) and aud.get("status") == "OK":
+        if st_aud == 200 and isinstance(aud, dict) and aud.get("status") in ("OK", "UNRESOLVED"):
             audio_id = aud.get("audio_id") or audio_id
-            audio_url = aud.get("download_url") or audio_url
             audio_label = aud.get("audio_label") or audio_label
-            print(f"  manual audio resolved: {audio_label or audio_id} (from {aud.get('resolved_from', 'db')})")
+            print(f"  manual audio to attach: {audio_label or audio_id}")
         else:
-            print(f"  manual audio resolve: {aud.get('status') if isinstance(aud, dict) else st_aud}; using next-reel audio fields")
+            print(f"  manual audio resolve: {aud.get('status') if isinstance(aud, dict) else st_aud}; using next-reel audio_id")
     except Exception as exc:
-        print(f"  manual audio resolve notice: {exc}; using next-reel audio fields")
-
-    if audio_url:
-        try:
-            print(f"Downloading manual audio preview ({audio_label or audio_id}) from Instagram...")
-            req = urllib.request.Request(audio_url, headers={"User-Agent": "Mozilla/5.0"})
-            tmp_audio = f"/tmp/audio_{reel_id}.m4a" if os.path.exists("/tmp") else f"audio_{reel_id}.m4a"
-            with urllib.request.urlopen(req, timeout=15) as resp, open(tmp_audio, "wb") as f:
-                f.write(resp.read())
-            if os.path.exists(tmp_audio) and os.path.getsize(tmp_audio) > 1000:
-                audio_file_path = Path(tmp_audio)
-                print(f"  Downloaded audio ({os.path.getsize(audio_file_path)} bytes) — fast-forward 10s with fade-out")
-        except Exception as exc:
-            print(f"  Audio download notice: {exc}; falling back cleanly")
-
-    if not audio_file_path:
-        local_fallback = Path(__file__).resolve().parent.parent / "assets" / "audio" / "upbeat_tech_1.wav"
-        if local_fallback.exists() and local_fallback.stat().st_size > 1000:
-            audio_file_path = local_fallback
-            print(f"  Using bundled upbeat tech background music: {local_fallback.name} ({local_fallback.stat().st_size} bytes)")
+        print(f"  manual audio resolve notice: {exc}; using next-reel audio_id")
 
     print(f"Generating unique 1080x1920 job content card locally on worker for reel #{reel_id}...")
     content_img = generate_local_content_cover(reel)
