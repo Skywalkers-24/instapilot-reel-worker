@@ -10,7 +10,7 @@ Features:
   - Deduplicates by canonical URL and job external ID.
   - Maintains structured detailed logs per company and source:
       Company -> Source -> Endpoints checked -> Found -> Accepted -> Rejected with exact reasons -> Retries/Errors.
-  - Streams batches to backend which caps DB to 500 jobs max.
+  - Streams batches to backend which enforces the DB job-retention cap.
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from collections import Counter
 import httpx
 
 from filters import validate_strict_early_career
-from providers import USER_AGENT, provider_for
+from providers import BROWSER_HEADERS, provider_for
 
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000").rstrip("/")
 CRON_SECRET = os.environ.get("CRON_SECRET", "dev-secret")
@@ -190,7 +190,7 @@ def flush(batch: list[dict], is_last: bool) -> dict:
     if status != 200:
         print(f"  [INGEST ERROR] HTTP {status}: {data}")
         return {"saved": 0, "skipped": 0}
-    print(f"  [INGEST FLUSH] Batch of {len(batch)} -> Saved: {data.get('saved', 0)} | Skipped: {data.get('skipped', 0)} | DB Pruned to 500 Cap: {data.get('pruned_jobs', 0)}")
+    print(f"  [INGEST FLUSH] Batch of {len(batch)} -> Saved: {data.get('saved', 0)} | Skipped: {data.get('skipped', 0)} | Old jobs pruned: {data.get('pruned_jobs', 0)}")
     return data
 
 
@@ -212,7 +212,7 @@ def main() -> int:
         return 1
     print(f"=== Starting Crawl Across {len(companies)} Companies (Strict 0-3y Tech Roles) ===")
 
-    client = httpx.Client(timeout=HTTP_TIMEOUT, follow_redirects=True, headers={"User-Agent": USER_AGENT})
+    client = httpx.Client(timeout=HTTP_TIMEOUT, follow_redirects=True, headers=dict(BROWSER_HEADERS))
     total_found = 0
     total_accepted = 0
     total_rejected = 0
@@ -245,7 +245,7 @@ def main() -> int:
                 total_skipped += int(res.get("skipped", 0) or 0)
                 batch = []
 
-        # Final flush (always send, even if empty, so backend enforces 500 cap retention)
+        # Final flush (always send, even if empty, so backend enforces retention cap)
         res = flush(batch, is_last=True)
         total_saved += int(res.get("saved", 0) or 0)
         total_skipped += int(res.get("skipped", 0) or 0)

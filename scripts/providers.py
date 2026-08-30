@@ -12,7 +12,20 @@ from urllib.parse import parse_qs, urljoin, urlparse
 
 import httpx
 
-USER_AGENT = "InstaPilotJobReels/1.0 (+official-career-source-check)"
+# Real browser User-Agent. A bot-looking UA gets 403'd by anti-bot layers
+# (Cloudflare, gamejobs.co, etc.), so we present as a mainstream browser.
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+
+# Browser-like headers sent on every request to look like a normal visitor.
+BROWSER_HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,application/json;q=0.8,*/*;q=0.7",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Cache-Control": "no-cache",
+}
 
 # HTTP statuses worth retrying (rate limiting + transient server/gateway errors).
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
@@ -262,7 +275,7 @@ class OfficialJobProvider:
     name = "career_page"
 
     def __init__(self, client: httpx.Client | None = None) -> None:
-        self.client = client or httpx.Client(timeout=20, follow_redirects=True, headers={"User-Agent": USER_AGENT})
+        self.client = client or httpx.Client(timeout=20, follow_redirects=True, headers=dict(BROWSER_HEADERS))
 
     def _get(self, url: str, **kwargs: object) -> httpx.Response:
         return request_with_retry(self.client, "GET", url, **kwargs)
@@ -505,6 +518,20 @@ class GenericCareerPageProvider(OfficialJobProvider):
 
     def collect(self, source_url: str) -> list[JobPostingCandidate]:
         response = self._get(source_url)
+        # Some anti-bot layers 403 the first hit; retry once with a fuller set of
+        # browser fetch headers (Referer + Sec-Fetch-*) which often passes.
+        if response.status_code in (401, 403):
+            parsed = urlparse(source_url)
+            retry_headers = {
+                "Referer": f"{parsed.scheme}://{parsed.netloc}/",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "same-origin",
+                "Upgrade-Insecure-Requests": "1",
+            }
+            retried = self._get(source_url, headers=retry_headers)
+            if retried.status_code < 400:
+                response = retried
         response.raise_for_status()
         parser = CareerHTMLParser()
         parser.feed(response.text)
@@ -838,7 +865,7 @@ class PersonioProvider(OfficialJobProvider):
 
 
 def detect_company_ats_sources(company_name: str, client: httpx.Client | None = None, *, min_jobs: int = 1) -> list[dict[str, str | int]]:
-    client = client or httpx.Client(timeout=10, follow_redirects=True, headers={"User-Agent": USER_AGENT})
+    client = client or httpx.Client(timeout=10, follow_redirects=True, headers=dict(BROWSER_HEADERS))
     found: list[dict[str, str | int]] = []
     for token in token_variations(company_name):
         candidates = [
@@ -882,10 +909,11 @@ def provider_for(source_url: str, client: httpx.Client | None = None) -> Officia
         "career_page": GenericCareerPageProvider,
         "jobvite": GenericCareerPageProvider,
         "bamboohr": GenericCareerPageProvider,
-        "workable": GenericCareerPageProvider,
-        "personio": GenericCareerPageProvider,
+        # Dedicated public-API providers (were incorrectly falling back to HTML).
+        "workable": WorkableProvider,
+        "personio": PersonioProvider,
+        "recruitee": RecruiteeProvider,
         "teamtailor": GenericCareerPageProvider,
-        "recruitee": GenericCareerPageProvider,
         "breezy": GenericCareerPageProvider,
         "skillate": GenericCareerPageProvider,
         "comeet": GenericCareerPageProvider,
