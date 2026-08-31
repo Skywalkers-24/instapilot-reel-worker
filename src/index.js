@@ -2,7 +2,7 @@
  * Cloudflare Worker Cron for Instapilot Automations
  *
  * Schedules regular triggers to the backend:
- *   1. Reel Publishing: every 15 minutes ("* /15 * * * *") -> /api/cron/trigger-publish
+ *   1. Reel Publishing: every 30 minutes ("* /30 * * * *") -> /api/cron/trigger-publish
  *   2. Job Scraping: 6:00 AM & 4:00 PM IST ("30 0,10 * * *") -> /api/cron/trigger-scrape-jobs
  *
  * Also handles HTTP requests for easy testing, manual triggers, and health checks via:
@@ -23,7 +23,7 @@ export default {
 
     // Determine event type based on cron expression:
     // "30 0,10 * * *" -> Scrape Jobs (6:00 AM & 4:00 PM IST)
-    // "*/15 * * * *" -> Publish Reel (backend cadence-gated)
+    // "*/30 * * * *" -> Publish Reel (backend cadence-gated)
     const isJobScrape =
       cronPattern === "30 0,10 * * *" ||
       cronPattern === "30 10 * * *" ||
@@ -115,7 +115,7 @@ export default {
       worker: "instapilot-reel-worker",
       status: "online",
       schedules: [
-        { name: "Reel Publish", cron: "*/15 * * * *", frequency: "Every 15 min" },
+        { name: "Reel Publish", cron: "*/30 * * * *", frequency: "Every 30 min" },
         { name: "Job Scraping", cron: "30 0,10 * * *", frequency: "6:00 AM & 4:00 PM IST (00:30 & 10:30 UTC)" },
       ],
       configured: {
@@ -169,7 +169,7 @@ export default {
     <h1>Instapilot Cron Worker <span class="badge ${backendUrl && hasSecret ? "" : "warn"}">${backendUrl && hasSecret ? "Active" : "Config Missing"}</span></h1>
     <p style="color: #94a3b8; font-size: 0.95rem;">Cloudflare cron triggers manage automated Instagram publishing & job scraping.</p>
     
-    <div class="stat-row"><span>1. Reel Publish:</span> <code>*/15 * * * *</code> (Every 15 min)</div>
+    <div class="stat-row"><span>1. Reel Publish:</span> <code>*/30 * * * *</code> (Every 30 min)</div>
     <div class="stat-row"><span>2. Job Scraping:</span> <code>30 0,10 * * *</code> (6:00 AM & 4:00 PM IST)</div>
     <div class="stat-row"><span>Backend URL:</span> <strong>${backendUrl ? "Configured" : "Not Set"}</strong></div>
     <div class="stat-row"><span>CRON_SECRET:</span> <strong>${hasSecret ? "Configured" : "Not Set"}</strong></div>

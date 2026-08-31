@@ -2,7 +2,7 @@ name: Publish Reel
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/30 * * * *'
   repository_dispatch:
     types: [publish-reel]     # fired by the backend after Cloudflare cron calls it
   workflow_dispatch:          # manual "Run workflow" button
