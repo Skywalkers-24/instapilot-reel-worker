@@ -37,7 +37,13 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPOSITORY", "")  # owner/repo
 RELEASE_TAG = os.getenv("RELEASE_TAG", "reel-media")
 KEEP_ASSETS = int(os.getenv("KEEP_ASSETS", "5"))
+# Job-content section stays 12s (capped). An OUTRO section (default 8s) is
+# appended after it — a full-avatar "Follow @trendyapaa" close — so the whole
+# reel runs CONTENT + OUTRO seconds (default 20s). The merged trending audio
+# spans the full length.
 REEL_SECONDS = min(float(os.getenv("REEL_SECONDS", "12.0")), 12.0)
+OUTRO_SECONDS = min(float(os.getenv("OUTRO_SECONDS", "8.0")), 12.0)
+TOTAL_SECONDS = REEL_SECONDS + OUTRO_SECONDS
 FORCE_PUBLISH = os.getenv("FORCE_PUBLISH", "").strip().lower() in {"1", "true", "yes", "on"}
 
 POLL_MAX = int(os.getenv("POLL_MAX", "12"))
@@ -55,7 +61,7 @@ CHANNEL_FOOTER_NOTE = "Direct Employer Applications • Zero Spam"
 
 W, H = 720, 1280
 FPS = 24
-TOTAL_FRAMES = int(FPS * REEL_SECONDS)
+TOTAL_FRAMES = int(FPS * TOTAL_SECONDS)
 
 COLOR_BG_BASE = (12, 16, 26)
 COLOR_CARD_BG = (22, 28, 44, 240)
@@ -768,12 +774,20 @@ def render_multi_scene_video(
     out_path: str,
     duration: float = REEL_SECONDS,
     audio_file: Path | str | None = None,
+    outro_seconds: float = OUTRO_SECONDS,
 ) -> None:
     """
     Renders high-definition motion reel with authentic human-curated editorial scenes.
     Eliminates robotic AI voice and fake bot spam scripts.
+
+    Layout: `duration` seconds of job-content scenes (capped 12s), followed by
+    `outro_seconds` of a full-avatar "Follow @trendyapaa" close (2 scenes). The
+    merged trending audio spans the full content+outro length.
     """
-    duration = min(float(duration or REEL_SECONDS), 12.0)
+    # Job-content section stays capped at 12s; the outro is appended after it.
+    content_seconds = min(float(duration or REEL_SECONDS), 12.0)
+    outro_seconds = max(0.0, min(float(outro_seconds or 0.0), 12.0))
+    total_seconds = content_seconds + outro_seconds
     ffmpeg_bin = get_ffmpeg_exe()
     company = (reel_info.get("company") or "Top Tech Company").strip()
     role = (reel_info.get("role") or reel_info.get("title") or "Software Engineer").strip()
@@ -820,7 +834,117 @@ def render_multi_scene_video(
     offset_x = margin + pad + (avail_w - fit_w) // 2
     offset_y = card_y + pad + (avail_h - fit_h) // 2
 
-    total_frames = max(1, int(FPS * duration))
+    content_frames = max(1, int(FPS * content_seconds))
+    outro_frames = max(0, int(FPS * outro_seconds))
+    total_frames = content_frames + outro_frames
+
+    # Pre-build a CLEAN outro background once: the avatar photo on a themed
+    # gradient, with the whole lower area left empty so the animated "Follow
+    # @trendyapaa" panel sits on a clean surface. We deliberately do NOT reuse
+    # generate_local_avatar_cover here — that cover bakes in the job card
+    # (company/role, specs pills, "apply link" CTA) which would bleed through
+    # behind the follow content.
+    PANEL_TOP = H - 470  # everything below this is the clean follow panel
+    outro_base = None
+    if outro_frames > 0:
+        try:
+            palette = get_theme_palette(reel_id)
+            bg_top = _mix(palette["bg_top"], (255, 255, 255), 0.06)
+            base = _vertical_gradient(W, H, bg_top, palette["bg_top"]).convert("RGB")
+            avatar_file = resolve_local_avatar_file(avatar_name, reel_id)
+            if avatar_file and avatar_file.exists():
+                # Fit the avatar into the region ABOVE the follow panel so it's
+                # never covered awkwardly; center on the face.
+                av_region_h = PANEL_TOP - 40
+                cover = ImageOps.fit(
+                    Image.open(avatar_file).convert("RGB"), (W, av_region_h),
+                    method=Image.Resampling.LANCZOS, centering=(0.5, 0.30),
+                )
+                base.paste(cover, (0, 0))
+                # Soft fade at the very top so the header sits cleanly.
+                top_fade = _top_fade(W, palette["bg_top"], start_y=0, fade_len=150, max_alpha=235)
+                base.paste(top_fade, (0, 0), mask=top_fade)
+            outro_base = base
+        except Exception as exc:
+            print(f"  [OUTRO] background build failed: {exc}; outro will use plain background")
+
+    def render_outro_frame(local_frame: int) -> Image.Image:
+        """Full-avatar close with an animated 'Follow @trendyapaa' banner.
+
+        Two sub-scenes across the outro: (1) a top 'FOLLOW FOR DAILY TECH JOBS'
+        banner + big handle; (2) adds a pulsing 'Tap Follow' CTA pill. Rendered
+        on top of the full-avatar hero still.
+        """
+        if outro_base is not None:
+            img = outro_base.copy().convert("RGB")
+        else:
+            img = create_dynamic_background(content_frames + local_frame, total_frames)
+        draw = ImageDraw.Draw(img)
+
+        # Continue the top progress bar to 100% across the whole reel.
+        progress = int((content_frames + local_frame + 1) / total_frames * inner_w)
+        rounded_rect(draw, (margin, 46, W - margin, 54), 4, (40, 48, 64))
+        rounded_rect(draw, (margin, 46, margin + progress, 54), 4, COLOR_ACCENT)
+
+        half = max(1, outro_frames // 2)
+        sub_scene = 1 if local_frame < half else 2
+
+        # Solid, OPAQUE follow panel over the lower area — a clean surface so
+        # nothing from the avatar/background bleeds through behind the text. A
+        # short gradient blends the avatar into the panel's top edge.
+        panel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        pdraw = ImageDraw.Draw(panel)
+        blend_h = 90
+        for y in range(PANEL_TOP - blend_h, PANEL_TOP):
+            a = int(255 * ((y - (PANEL_TOP - blend_h)) / blend_h))
+            pdraw.line((0, y, W, y), fill=(12, 16, 26, a))
+        pdraw.rectangle((0, PANEL_TOP, W, H), fill=(12, 16, 26, 255))
+        img = Image.alpha_composite(img.convert("RGBA"), panel).convert("RGB")
+        draw = ImageDraw.Draw(img)
+
+        # Top pill: FOLLOW FOR DAILY TECH JOBS
+        top_pill = "FOLLOW FOR DAILY TECH JOBS"
+        tp_fnt = get_font(24, bold=True)
+        tpw = draw.textbbox((0, 0), top_pill, font=tp_fnt)[2]
+        pill_w = tpw + 56
+        rounded_rect(draw, ((W - pill_w) // 2, 96, (W + pill_w) // 2, 150), 18, COLOR_ACCENT_ORANGE)
+        draw.text(((W - tpw) // 2, 108), top_pill, font=tp_fnt, fill=COLOR_TEXT_WHITE)
+
+        # ── Follow panel contents (all laid out inside the clean panel) ──
+        # Face logo sits centered at the panel's top edge.
+        face_d = 150
+        face_x = (W - face_d) // 2
+        face_y = PANEL_TOP - face_d // 2
+        face_circ = face_lg.resize((face_d, face_d), Image.Resampling.LANCZOS)
+        img.paste(face_circ, (face_x, face_y), face_circ)
+        draw.ellipse((face_x, face_y, face_x + face_d, face_y + face_d), outline=COLOR_ACCENT, width=5)
+
+        # Big handle "Follow @trendyapaa".
+        handle_y = face_y + face_d + 22
+        follow_line = f"Follow {CHANNEL_HANDLE}"
+        fl_fnt = get_font(46, bold=True)
+        flw = draw.textbbox((0, 0), follow_line, font=fl_fnt)[2]
+        draw.text(((W - flw) // 2, handle_y), follow_line, font=fl_fnt, fill=COLOR_TEXT_WHITE)
+
+        sub = "Verified tech roles • Every single day"
+        sub_fnt = get_font(22, bold=False)
+        sw = draw.textbbox((0, 0), sub, font=sub_fnt)[2]
+        draw.text(((W - sw) // 2, handle_y + 58), sub, font=sub_fnt, fill=COLOR_ACCENT)
+
+        # Sub-scene 2: pulsing "TAP FOLLOW" CTA pill (well below the subline).
+        if sub_scene == 2:
+            pulse = 0.5 + 0.5 * math.sin((local_frame - half) / max(1, half) * math.tau)
+            cta = "TAP  FOLLOW  →"
+            cta_fnt = get_font(30, bold=True)
+            cw = draw.textbbox((0, 0), cta, font=cta_fnt)[2]
+            cpw = cw + 72
+            cta_h = 64
+            cy = handle_y + 110
+            col = _mix(COLOR_ACCENT_ORANGE, (255, 255, 255), 0.25 * pulse)
+            rounded_rect(draw, ((W - cpw) // 2, cy, (W + cpw) // 2, cy + cta_h), 22, col)
+            draw.text(((W - cw) // 2, cy + 16), cta, font=cta_fnt, fill=COLOR_TEXT_WHITE)
+
+        return img
 
     def draw_frame(frame: int, scene_name: str) -> Image.Image:
         img = create_dynamic_background(frame, total_frames)
@@ -992,26 +1116,33 @@ def render_multi_scene_video(
         frame_dir = Path(tmp)
 
         for i in range(total_frames):
-            cur_sec = i / FPS
-            rel_t = cur_sec / max(1.0, duration)
-            if rel_t < 0.22:
-                scene_name = "intro_hook"
-            elif rel_t < 0.48:
-                scene_name = "content_card"
-            elif rel_t < 0.78:
-                scene_name = "role_details"
+            if i < content_frames:
+                # Job-content scenes mapped by ABSOLUTE seconds within the 12s
+                # content window (so appending the outro never rescales them).
+                cur_sec = i / FPS
+                rel_t = cur_sec / max(1.0, content_seconds)
+                if rel_t < 0.22:
+                    scene_name = "intro_hook"
+                elif rel_t < 0.48:
+                    scene_name = "content_card"
+                elif rel_t < 0.78:
+                    scene_name = "role_details"
+                else:
+                    scene_name = "cta_action"
+                f_img = draw_frame(i, scene_name=scene_name)
             else:
-                scene_name = "cta_action"
-
-            f_img = draw_frame(i, scene_name=scene_name)
+                # Outro: full-avatar "Follow @trendyapaa" close (2 sub-scenes).
+                f_img = render_outro_frame(i - content_frames)
             f_img.save(frame_dir / f"frame_{i:04d}.png", "PNG")
 
         tmp_out = frame_dir / "out.mp4"
         if audio_file and os.path.exists(str(audio_file)) and os.path.getsize(str(audio_file)) > 1000:
-            fade_start = max(0.0, duration - 1.0)
+            # Skip the first 10s of the track (intros), span the full reel, fade
+            # out the last 1s.
+            fade_start = max(0.0, total_seconds - 1.0)
             audio_inputs = [
                 "-ss", "10",
-                "-t", str(duration),
+                "-t", str(total_seconds),
                 "-i", str(audio_file),
                 "-af", f"afade=t=out:st={fade_start:.1f}:d=1.0",
             ]
@@ -1035,7 +1166,7 @@ def render_multi_scene_video(
             "-pix_fmt", "yuv420p",
             "-c:a", "aac",
             "-b:a", "128k",
-            "-t", str(duration),
+            "-t", str(total_seconds),
             "-r", str(FPS),
             "-movflags", "+faststart",
             str(tmp_out),
@@ -1126,25 +1257,45 @@ def main() -> int:
     reel_id = reel["reel_id"]
     print(f"Next reel: #{reel_id} — {reel.get('title')!r}")
 
-    # 1. Resolve the manual-audio track to ATTACH to the reel. The audio_id from
-    #    the manual_audio pool is attached to the IG container with the attached
-    #    track dominant (audio_volume=100, video_volume=1, set backend-side), so
-    #    Instagram plays the trending sound. No audio is downloaded or merged —
-    #    the reel is rendered with a silent track.
+    # 1. Resolve the manual-audio track to DOWNLOAD, SKIP 10s and MERGE into the
+    #    reel. The backend picks the track (weighted; reel_usage_count breaks
+    #    ties) and returns its audio_id, label and a playable download_url. We
+    #    download that, the renderer skips the first 10s and merges it so the
+    #    trending sound plays in-video (video dominant); its audio_id is still
+    #    attached to the IG container for reach.
     audio_file_path = None
     audio_id = reel.get("audio_id") or ""
     audio_label = reel.get("audio_label") or ""
+    audio_download_url = reel.get("audio_download_url") or ""
 
-    try:
-        st_aud, aud = backend_post("/api/cron/manual-audio/resolve", {"audio_id": audio_id})
-        if st_aud == 200 and isinstance(aud, dict) and aud.get("audio_id"):
-            audio_id = aud.get("audio_id") or audio_id
-            audio_label = aud.get("audio_label") or audio_label
-            print(f"  manual audio to attach: {audio_label or audio_id}")
-        else:
-            print(f"  manual audio resolve: {aud.get('status') if isinstance(aud, dict) else st_aud}; using next-reel audio_id")
-    except Exception as exc:
-        print(f"  manual audio resolve notice: {exc}; using next-reel audio_id")
+    # If next-reel didn't carry a fresh download_url, resolve it on demand.
+    if audio_id and not audio_download_url:
+        try:
+            st_aud, aud = backend_post("/api/cron/manual-audio/resolve", {"audio_id": audio_id})
+            if st_aud == 200 and isinstance(aud, dict):
+                audio_id = aud.get("audio_id") or audio_id
+                audio_label = aud.get("audio_label") or audio_label
+                audio_download_url = aud.get("download_url") or audio_download_url
+        except Exception as exc:
+            print(f"  manual audio resolve notice: {exc}")
+
+    if audio_id:
+        # Download the chosen track so the renderer can skip 10s + merge it.
+        if audio_download_url:
+            try:
+                audio_file_path = f"audio-{reel_id}.mp4"
+                st_dl, raw = _http("GET", audio_download_url, timeout=60)
+                if st_dl == 200 and raw and len(raw) > 1000:
+                    with open(audio_file_path, "wb") as f:
+                        f.write(raw)
+                    print(f"  downloaded audio for merge: {audio_file_path} ({len(raw)} bytes)")
+                else:
+                    print(f"  audio download failed (HTTP {st_dl}); rendering without merge.")
+                    audio_file_path = None
+            except Exception as exc:
+                print(f"  audio download error: {exc}; rendering without merge.")
+                audio_file_path = None
+        print(f"  audio to merge+attach: {audio_label or audio_id} (id={audio_id})")
 
     print(f"Generating unique 1080x1920 job content card locally on worker for reel #{reel_id}...")
     content_img = generate_local_content_cover(reel)
@@ -1180,7 +1331,10 @@ def main() -> int:
     prune_assets(release_id, KEEP_ASSETS)
 
     print("Publishing to Instagram via backend endpoints...")
-    ig_status, media_id, msg = publish_via_backend(reel_id, video_url, cover_url=cover_public_url, audio_id=audio_id, audio_label=audio_label)
+    ig_status, media_id, msg = publish_via_backend(
+        reel_id, video_url, cover_url=cover_public_url,
+        audio_id=audio_id, audio_label=audio_label,
+    )
     print(f"IG result: status={ig_status} media_id={media_id} msg={msg}")
 
     _st, mark = backend_post("/api/cron/mark-published", {
