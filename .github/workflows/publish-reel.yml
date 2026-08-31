@@ -23,6 +23,8 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      PYTHONUNBUFFERED: '1'
     steps:
       - name: Checkout worker
         uses: actions/checkout@v4
@@ -39,6 +41,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Install Playwright Chromium
+        run: python -m playwright install chromium
 
       # Cache a single static ffmpeg binary instead of apt-installing ~99
       # packages every run (that was ~1m40s). First run downloads ~30MB once;
@@ -63,9 +67,7 @@ jobs:
       - name: Put ffmpeg on PATH
         run: echo "$HOME/ffmpeg-static" >> "$GITHUB_PATH"
 
-      # Single loop: the script builds the next reel (cadence-gated), renders
-      # the MP4, publishes via the thin backend endpoints, and reports outcome.
-      - name: Build + render + publish
+      - name: Prepare next reel
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
@@ -75,4 +77,55 @@ jobs:
           KEEP_ASSETS: '5'
           REEL_SECONDS: '12'
           FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
-        run: python scripts/publish_reel.py
+        run: python scripts/publish_reel.py --stage prepare
+
+      - name: Scrape and rank audio
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IG_SESSIONID: ${{ secrets.IG_SESSIONID }}
+          RELEASE_TAG: reel-media
+          KEEP_ASSETS: '5'
+          REEL_SECONDS: '12'
+          FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
+        run: python scripts/publish_reel.py --stage scrape-audio
+
+      - name: Render reel video
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IG_SESSIONID: ${{ secrets.IG_SESSIONID }}
+          RELEASE_TAG: reel-media
+          KEEP_ASSETS: '5'
+          REEL_SECONDS: '12'
+          FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
+        run: python scripts/publish_reel.py --stage render
+
+      - name: Upload media assets
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IG_SESSIONID: ${{ secrets.IG_SESSIONID }}
+          RELEASE_TAG: reel-media
+          KEEP_ASSETS: '5'
+          REEL_SECONDS: '12'
+          FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
+        run: python scripts/publish_reel.py --stage upload
+
+      - name: Publish and mark complete
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IG_SESSIONID: ${{ secrets.IG_SESSIONID }}
+          RELEASE_TAG: reel-media
+          KEEP_ASSETS: '5'
+          REEL_SECONDS: '12'
+          FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
+          POLL_FIRST_DELAY: '30'
+          POLL_INTERVAL: '15'
+          POLL_MAX: '8'
+        run: python scripts/publish_reel.py --stage publish

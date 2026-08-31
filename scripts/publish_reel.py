@@ -46,12 +46,13 @@ OUTRO_SECONDS = min(float(os.getenv("OUTRO_SECONDS", "8.0")), 12.0)
 TOTAL_SECONDS = REEL_SECONDS + OUTRO_SECONDS
 FORCE_PUBLISH = os.getenv("FORCE_PUBLISH", "").strip().lower() in {"1", "true", "yes", "on"}
 
-POLL_MAX = int(os.getenv("POLL_MAX", "12"))
-POLL_INTERVAL = float(os.getenv("POLL_INTERVAL", "8"))
-POLL_FIRST_DELAY = float(os.getenv("POLL_FIRST_DELAY", "15"))
+POLL_MAX = int(os.getenv("POLL_MAX", "8"))
+POLL_INTERVAL = float(os.getenv("POLL_INTERVAL", "15"))
+POLL_FIRST_DELAY = float(os.getenv("POLL_FIRST_DELAY", "30"))
 IG_SESSIONID = os.getenv("IG_SESSIONID", "").strip()
 AUDIO_SCRAPE_MAX = min(int(os.getenv("AUDIO_SCRAPE_MAX", "20")), 20)
 AUDIO_SCRAPE_WORKERS = min(int(os.getenv("AUDIO_SCRAPE_WORKERS", "4")), 4)
+STATE_PATH = Path(os.getenv("PUBLISH_STATE_PATH", ".publish_state.json"))
 
 GH_API = "https://api.github.com"
 
@@ -99,6 +100,23 @@ def backend_post(path: str, payload: dict | None):
     except Exception:
         parsed = {"raw": raw.decode(errors="replace")}
     return status, parsed
+
+
+def _log(message: str) -> None:
+    print(message, flush=True)
+
+
+def _load_state() -> dict:
+    if not STATE_PATH.exists():
+        return {}
+    try:
+        return json.loads(STATE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _save_state(state: dict) -> None:
+    STATE_PATH.write_text(json.dumps(state, indent=2), encoding="utf-8")
 
 
 def gh_api(method: str, path: str, *, data=None):
@@ -401,7 +419,15 @@ def _scrape_audio_candidates_on_runner(candidates: list[dict]) -> list[dict]:
         return []
 
     _ensure_playwright_chromium()
-    print(f"  scraping {len(candidates)} audio candidate(s) on GitHub runner...")
+    _log(f"  scraping {len(candidates)} audio candidate(s) on GitHub runner...")
+    for idx, c in enumerate(candidates, 1):
+        aid = str(c.get("audio_id") or "")
+        _log(
+            f"  AUDIT audio_candidate[{idx}] "
+            f"audio_id={aid} instagram_url=https://www.instagram.com/reels/audio/{aid}/ "
+            f"title={c.get('title', '')!r} artist={c.get('display_artist', '')!r} "
+            f"audio_type={c.get('audio_type', '')} has_download_url={bool(c.get('download_url'))}"
+        )
     results = scrape_counts(
         [{"audio_id": c["audio_id"], "title": c.get("title", "")} for c in candidates],
         session_id=IG_SESSIONID,
@@ -416,9 +442,16 @@ def _scrape_audio_candidates_on_runner(candidates: list[dict]) -> list[dict]:
         row = {**c, **(by_id.get(str(c.get("audio_id") or "")) or {})}
         ranked.append(row)
     ranked.sort(key=lambda r: r.get("reel_count") if isinstance(r.get("reel_count"), int) else -1, reverse=True)
-    for row in ranked[:5]:
+    for idx, row in enumerate(ranked, 1):
         count = row.get("reel_count")
-        print(f"    [{row.get('status', 'unknown')}] {row.get('audio_id')} count={count if count is not None else '-'} {row.get('title', '')[:42]}")
+        aid = str(row.get("audio_id") or "")
+        _log(
+            f"  AUDIT audio_scrape_result[{idx}] "
+            f"audio_id={aid} instagram_url=https://www.instagram.com/reels/audio/{aid}/ "
+            f"status={row.get('status', 'unknown')} reel_count={count if count is not None else '-'} "
+            f"count_field={row.get('count_field', '')} elapsed_s={row.get('elapsed_s', '')} "
+            f"title={row.get('title', '')!r} scraped_title={row.get('scraped_title', '')!r}"
+        )
     return ranked
 
 
@@ -434,7 +467,11 @@ def _choose_audio_from_runner_scrape(reel: dict) -> dict:
     for row in ranked:
         if row.get("audio_id") and row.get("download_url") and isinstance(row.get("reel_count"), int):
             label = f"{row.get('title', '')} - {row.get('display_artist', '')}".strip(" -")
-            print(f"  runner selected audio: {label or row['audio_id']} ({row['reel_count']} reels)")
+            _log(
+                f"  AUDIT audio_selected audio_id={row['audio_id']} "
+                f"instagram_url=https://www.instagram.com/reels/audio/{row['audio_id']}/ "
+                f"reel_count={row['reel_count']} label={label or row['audio_id']!r}"
+            )
             return {
                 "audio_id": row["audio_id"],
                 "audio_label": label or fallback["audio_label"],
@@ -445,7 +482,11 @@ def _choose_audio_from_runner_scrape(reel: dict) -> dict:
         row = ranked[0]
         if row.get("audio_id") and row.get("download_url"):
             label = f"{row.get('title', '')} - {row.get('display_artist', '')}".strip(" -")
-            print(f"  runner selected audio without count: {label or row['audio_id']}")
+            _log(
+                f"  AUDIT audio_selected_no_count audio_id={row['audio_id']} "
+                f"instagram_url=https://www.instagram.com/reels/audio/{row['audio_id']}/ "
+                f"label={label or row['audio_id']!r}"
+            )
             return {
                 "audio_id": row["audio_id"],
                 "audio_label": label or fallback["audio_label"],
@@ -1312,23 +1353,27 @@ def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "", audio
     audio_label = data.get("audio") or ""
     audio_id_used = data.get("audio_id") or ""
     if audio_id_used:
-        print(f"  audio attached: {audio_label or audio_id_used} (id={audio_id_used})")
+        _log(f"  audio attached: {audio_label or audio_id_used} (id={audio_id_used})")
     else:
-        print("  no audio attached (none available / not applicable)")
-    print(f"  container created: {container_id}")
+        _log("  no audio attached (none available / not applicable)")
+    _log(f"  container created: {container_id}")
 
+    _log(
+        f"  waiting {POLL_FIRST_DELAY:.0f}s before first Instagram processing status check "
+        f"(then up to {POLL_MAX} checks every {POLL_INTERVAL:.0f}s)"
+    )
     time.sleep(POLL_FIRST_DELAY)
     for attempt in range(POLL_MAX):
         st, data = backend_post("/api/cron/ig/container-status", {"container_id": container_id})
         if st == 200:
             code = data.get("status_code", "UNKNOWN")
-            print(f"  container status: {code} (attempt {attempt+1})")
+            _log(f"  container status: {code} (attempt {attempt+1})")
             if code == "FINISHED":
                 break
             if code in ("ERROR", "EXPIRED"):
                 return code, "", f"container processing {code}"
         else:
-            print(f"  status check HTTP {st} (attempt {attempt+1}); retrying")
+            _log(f"  status check HTTP {st} (attempt {attempt+1}); retrying")
         if attempt < POLL_MAX - 1:
             time.sleep(POLL_INTERVAL)
     else:
@@ -1340,96 +1385,179 @@ def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "", audio
     return data.get("status", "ERROR"), data.get("media_id", ""), data.get("message", "")
 
 
-def main() -> int:
+def stage_prepare() -> int:
     st, build = backend_post("/api/cron/auto-post", {"force": FORCE_PUBLISH})
     if st == 200:
-        print(f"auto-post: {build.get('status')} reel_id={build.get('reel_id')}")
+        _log(f"auto-post: {build.get('status')} reel_id={build.get('reel_id')}")
         if build.get("message") or build.get("reason"):
-            print(f"auto-post message: {build.get('message') or build.get('reason')}")
+            _log(f"auto-post message: {build.get('message') or build.get('reason')}")
     else:
-        print(f"auto-post HTTP {st}: {build}")
+        _log(f"auto-post HTTP {st}: {build}")
     if isinstance(build, dict) and build.get("status") == "SKIPPED_CADENCE":
-        print(f"Cadence gate active: {build.get('reason')}")
+        _log(f"Cadence gate active: {build.get('reason')}")
+        _save_state({"skip": True, "reason": build.get("reason")})
         return 0
 
     status, data = backend_post("/api/cron/next-reel", {"force": FORCE_PUBLISH})
     if status != 200:
-        print(f"next-reel failed: {status} {data}")
+        _log(f"next-reel failed: {status} {data}")
         return 1
     reel = data.get("reel")
     if not reel:
         if data.get("message"):
-            print(f"next-reel message: {data.get('message')}")
-        print("No reel to publish. Done.")
+            _log(f"next-reel message: {data.get('message')}")
+        _log("No reel to publish. Done.")
+        _save_state({"skip": True, "reason": data.get("message") or "no reel"})
         return 0
 
-    reel_id = reel["reel_id"]
-    print(f"Next reel: #{reel_id} — {reel.get('title')!r}")
+    _log(f"Next reel: #{reel['reel_id']} - {reel.get('title')!r}")
+    _log(f"Audio candidates from backend: {len(reel.get('audio_candidates') or [])}")
+    _save_state({"skip": False, "reel": reel})
+    return 0
 
-    # 1. Resolve the manual-audio track to DOWNLOAD, SKIP 10s and MERGE into the
-    # 1. Backend sends up to 20 /ig_audio candidates. The runner does the
-    #    Playwright scraping, picks the highest-count audio, downloads that same
-    #    preview URL for FFmpeg, and sends the same audio_id back for attach.
+
+def stage_scrape_audio() -> int:
+    state = _load_state()
+    if state.get("skip"):
+        _log(f"Skipping audio scrape: {state.get('reason', 'no reel')}")
+        return 0
+    reel = state.get("reel") or {}
+    reel_id = reel.get("reel_id")
     chosen_audio = _choose_audio_from_runner_scrape(reel)
     audio_id = chosen_audio.get("audio_id") or ""
     audio_label = chosen_audio.get("audio_label") or ""
     audio_file_path = _download_audio(chosen_audio.get("download_url") or "", reel_id)
     if audio_id:
-        print(f"  audio to attach: {audio_label or audio_id}")
+        _log(f"  audio to attach: {audio_label or audio_id}")
+    state["audio"] = {
+        **chosen_audio,
+        "audio_id": audio_id,
+        "audio_label": audio_label,
+        "audio_file_path": str(audio_file_path or ""),
+    }
+    _save_state(state)
+    return 0
 
-    print(f"Generating unique 1080x1920 job content card locally on worker for reel #{reel_id}...")
+
+def stage_render() -> int:
+    state = _load_state()
+    if state.get("skip"):
+        _log(f"Skipping render: {state.get('reason', 'no reel')}")
+        return 0
+    reel = state.get("reel") or {}
+    audio = state.get("audio") or {}
+    reel_id = reel["reel_id"]
+    audio_file_path = audio.get("audio_file_path") or None
+
+    _log(f"Generating unique 1080x1920 job content card locally on worker for reel #{reel_id}...")
     content_img = generate_local_content_cover(reel)
 
-    # Alternate thumbnail image between Scene 1 (content card) and Full Avatar cover
     use_avatar_cover = (int(reel_id or 0) % 2 == 1)
     if use_avatar_cover:
-        print(f"Generating unique 1080x1920 FULL AVATAR cover for reel #{reel_id} (alternating thumbnail mode)...")
+        _log(f"Generating unique 1080x1920 FULL AVATAR cover for reel #{reel_id} (alternating thumbnail mode)...")
         cover_img = generate_local_avatar_cover(reel)
     else:
-        print(f"Generating unique 1080x1920 SCENE 1 / CONTENT cover for reel #{reel_id} (alternating thumbnail mode)...")
+        _log(f"Generating unique 1080x1920 SCENE 1 / CONTENT cover for reel #{reel_id} (alternating thumbnail mode)...")
         cover_img = content_img
 
     cover_file = f"cover-{reel_id}.jpg"
     cover_img.save(cover_file, "JPEG", quality=95)
 
     out = f"reel-{reel_id}.mp4"
-    print("Rendering clean human-editorial multi-scene dynamic reel...")
+    _log("Rendering clean human-editorial multi-scene dynamic reel...")
     render_multi_scene_video(reel, content_img, out, audio_file=audio_file_path)
     size = os.path.getsize(out)
-    print(f"Rendered {out} ({size} bytes)")
+    _log(f"Rendered {out} ({size} bytes)")
+    state["render"] = {"video_file": out, "cover_file": cover_file, "video_size": size}
+    _save_state(state)
+    return 0
+
+
+def stage_upload() -> int:
+    state = _load_state()
+    if state.get("skip"):
+        _log(f"Skipping upload: {state.get('reason', 'no reel')}")
+        return 0
+    reel = state.get("reel") or {}
+    render = state.get("render") or {}
+    reel_id = reel["reel_id"]
+    out = render.get("video_file") or f"reel-{reel_id}.mp4"
+    cover_file = render.get("cover_file") or f"cover-{reel_id}.jpg"
 
     release_id = ensure_release()
     ts = int(time.time())
     asset_name = f"reel-{reel_id}-{ts}.mp4"
     video_url = upload_asset(release_id, out, asset_name, content_type="video/mp4")
-    print(f"Uploaded video: {video_url}")
+    _log(f"Uploaded video: {video_url}")
 
     cover_asset_name = f"cover-{reel_id}-{ts}.jpg"
     cover_public_url = upload_asset(release_id, cover_file, cover_asset_name, content_type="image/jpeg")
-    print(f"Uploaded unique cover: {cover_public_url}")
+    _log(f"Uploaded unique cover: {cover_public_url}")
 
     prune_assets(release_id, KEEP_ASSETS)
+    state["upload"] = {"video_url": video_url, "cover_public_url": cover_public_url}
+    _save_state(state)
+    return 0
 
-    print("Publishing to Instagram via backend endpoints...")
+
+def stage_publish() -> int:
+    state = _load_state()
+    if state.get("skip"):
+        _log(f"Nothing to publish: {state.get('reason', 'no reel')}")
+        return 0
+    reel = state.get("reel") or {}
+    audio = state.get("audio") or {}
+    upload = state.get("upload") or {}
+    reel_id = reel["reel_id"]
+    video_url = upload.get("video_url") or ""
+    cover_public_url = upload.get("cover_public_url") or ""
+    audio_id = audio.get("audio_id") or ""
+    audio_label = audio.get("audio_label") or ""
+
+    _log("Publishing to Instagram via backend endpoints...")
     ig_status, media_id, msg = publish_via_backend(
         reel_id, video_url, cover_url=cover_public_url,
         audio_id=audio_id, audio_label=audio_label,
     )
-    print(f"IG result: status={ig_status} media_id={media_id} msg={msg}")
+    _log(f"IG result: status={ig_status} media_id={media_id} msg={msg}")
 
     _st, mark = backend_post("/api/cron/mark-published", {
         "reel_id": reel_id, "video_url": video_url,
         "media_id": media_id, "status": ig_status, "error": msg,
     })
     if isinstance(mark, dict) and mark.get("media_audio_type"):
-        print(f"  media_audio_type: {mark.get('media_audio_type')}")
+        _log(f"  media_audio_type: {mark.get('media_audio_type')}")
 
     if ig_status in ("PUBLISHED", "DRY_RUN", "CONTAINER_READY"):
-        print("Done — clean human-editorial reel published.")
+        _log("Done - clean human-editorial reel published.")
         return 0
-    print(f"Publish did not succeed: {msg}")
+    _log(f"Publish did not succeed: {msg}")
     return 1
 
 
+def main() -> int:
+    stage = ""
+    if "--stage" in sys.argv:
+        idx = sys.argv.index("--stage")
+        stage = sys.argv[idx + 1] if idx + 1 < len(sys.argv) else ""
+    stages = {
+        "prepare": stage_prepare,
+        "scrape-audio": stage_scrape_audio,
+        "render": stage_render,
+        "upload": stage_upload,
+        "publish": stage_publish,
+    }
+    if stage:
+        fn = stages.get(stage)
+        if not fn:
+            _log(f"Unknown stage: {stage}")
+            return 2
+        return fn()
+
+    for fn in stages.values():
+        code = fn()
+        if code != 0:
+            return code
+    return 0
 if __name__ == "__main__":
     sys.exit(main())
