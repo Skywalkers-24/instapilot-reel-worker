@@ -49,6 +49,9 @@ FORCE_PUBLISH = os.getenv("FORCE_PUBLISH", "").strip().lower() in {"1", "true", 
 POLL_MAX = int(os.getenv("POLL_MAX", "12"))
 POLL_INTERVAL = float(os.getenv("POLL_INTERVAL", "8"))
 POLL_FIRST_DELAY = float(os.getenv("POLL_FIRST_DELAY", "15"))
+IG_SESSIONID = os.getenv("IG_SESSIONID", "").strip()
+AUDIO_SCRAPE_MAX = min(int(os.getenv("AUDIO_SCRAPE_MAX", "20")), 20)
+AUDIO_SCRAPE_WORKERS = min(int(os.getenv("AUDIO_SCRAPE_WORKERS", "4")), 4)
 
 GH_API = "https://api.github.com"
 
@@ -367,6 +370,112 @@ def get_ffmpeg_exe() -> str:
         return imageio_ffmpeg.get_ffmpeg_exe()
     except Exception:
         return "ffmpeg"
+
+
+def _ensure_playwright_chromium() -> None:
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "chromium"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=180,
+        )
+    except Exception:
+        pass
+
+
+def _scrape_audio_candidates_on_runner(candidates: list[dict]) -> list[dict]:
+    """Scrape candidate reel counts on the GitHub runner and return results."""
+    candidates = [c for c in (candidates or []) if c.get("audio_id")][:AUDIO_SCRAPE_MAX]
+    if not candidates:
+        return []
+
+    try:
+        scripts_dir = Path(__file__).resolve().parent
+        if str(scripts_dir) not in sys.path:
+            sys.path.insert(0, str(scripts_dir))
+        from scrape_audio_reel_counts import scrape_counts  # type: ignore
+    except Exception as exc:
+        print(f"  audio scrape unavailable on runner: {exc}")
+        return []
+
+    _ensure_playwright_chromium()
+    print(f"  scraping {len(candidates)} audio candidate(s) on GitHub runner...")
+    results = scrape_counts(
+        [{"audio_id": c["audio_id"], "title": c.get("title", "")} for c in candidates],
+        session_id=IG_SESSIONID,
+        workers=min(AUDIO_SCRAPE_WORKERS, len(candidates)),
+        headless=True,
+        per_page_timeout_ms=15000,
+        poll_ms=500,
+    )
+    by_id = {str(r.get("audio_id") or ""): r for r in results}
+    ranked = []
+    for c in candidates:
+        row = {**c, **(by_id.get(str(c.get("audio_id") or "")) or {})}
+        ranked.append(row)
+    ranked.sort(key=lambda r: r.get("reel_count") if isinstance(r.get("reel_count"), int) else -1, reverse=True)
+    for row in ranked[:5]:
+        count = row.get("reel_count")
+        print(f"    [{row.get('status', 'unknown')}] {row.get('audio_id')} count={count if count is not None else '-'} {row.get('title', '')[:42]}")
+    return ranked
+
+
+def _choose_audio_from_runner_scrape(reel: dict) -> dict:
+    """Pick the highest-count scraped candidate; fall back to next-reel audio."""
+    fallback = {
+        "audio_id": reel.get("audio_id") or "",
+        "audio_label": reel.get("audio_label") or "",
+        "download_url": reel.get("audio_download_url") or "",
+        "reel_count": None,
+    }
+    ranked = _scrape_audio_candidates_on_runner(reel.get("audio_candidates") or [])
+    for row in ranked:
+        if row.get("audio_id") and row.get("download_url") and isinstance(row.get("reel_count"), int):
+            label = f"{row.get('title', '')} - {row.get('display_artist', '')}".strip(" -")
+            print(f"  runner selected audio: {label or row['audio_id']} ({row['reel_count']} reels)")
+            return {
+                "audio_id": row["audio_id"],
+                "audio_label": label or fallback["audio_label"],
+                "download_url": row.get("download_url") or fallback["download_url"],
+                "reel_count": row.get("reel_count"),
+            }
+    if ranked:
+        row = ranked[0]
+        if row.get("audio_id") and row.get("download_url"):
+            label = f"{row.get('title', '')} - {row.get('display_artist', '')}".strip(" -")
+            print(f"  runner selected audio without count: {label or row['audio_id']}")
+            return {
+                "audio_id": row["audio_id"],
+                "audio_label": label or fallback["audio_label"],
+                "download_url": row.get("download_url") or fallback["download_url"],
+                "reel_count": row.get("reel_count"),
+            }
+    return fallback
+
+
+def _download_audio(download_url: str, reel_id: int) -> Path | None:
+    if not download_url:
+        return None
+    out = Path(f"audio-{reel_id}.mp4")
+    try:
+        req = urllib.request.Request(
+            download_url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; InstaPilotWorker/1.0)"},
+        )
+        with urllib.request.urlopen(req, timeout=60) as resp, out.open("wb") as f:
+            shutil.copyfileobj(resp, f)
+        if out.exists() and out.stat().st_size > 1000:
+            print(f"  downloaded audio for merge: {out} ({out.stat().st_size} bytes)")
+            return out
+    except Exception as exc:
+        print(f"  audio download failed; publishing with attached IG audio only: {exc}")
+    try:
+        out.unlink(missing_ok=True)
+    except Exception:
+        pass
+    return None
 
 
 def _mix(c1: tuple[int, int, int], c2: tuple[int, int, int], t: float) -> tuple[int, int, int]:
@@ -1258,44 +1367,15 @@ def main() -> int:
     print(f"Next reel: #{reel_id} — {reel.get('title')!r}")
 
     # 1. Resolve the manual-audio track to DOWNLOAD, SKIP 10s and MERGE into the
-    #    reel. The backend picks the track (weighted; reel_usage_count breaks
-    #    ties) and returns its audio_id, label and a playable download_url. We
-    #    download that, the renderer skips the first 10s and merges it so the
-    #    trending sound plays in-video (video dominant); its audio_id is still
-    #    attached to the IG container for reach.
-    audio_file_path = None
-    audio_id = reel.get("audio_id") or ""
-    audio_label = reel.get("audio_label") or ""
-    audio_download_url = reel.get("audio_download_url") or ""
-
-    # If next-reel didn't carry a fresh download_url, resolve it on demand.
-    if audio_id and not audio_download_url:
-        try:
-            st_aud, aud = backend_post("/api/cron/manual-audio/resolve", {"audio_id": audio_id})
-            if st_aud == 200 and isinstance(aud, dict):
-                audio_id = aud.get("audio_id") or audio_id
-                audio_label = aud.get("audio_label") or audio_label
-                audio_download_url = aud.get("download_url") or audio_download_url
-        except Exception as exc:
-            print(f"  manual audio resolve notice: {exc}")
-
+    # 1. Backend sends up to 20 /ig_audio candidates. The runner does the
+    #    Playwright scraping, picks the highest-count audio, downloads that same
+    #    preview URL for FFmpeg, and sends the same audio_id back for attach.
+    chosen_audio = _choose_audio_from_runner_scrape(reel)
+    audio_id = chosen_audio.get("audio_id") or ""
+    audio_label = chosen_audio.get("audio_label") or ""
+    audio_file_path = _download_audio(chosen_audio.get("download_url") or "", reel_id)
     if audio_id:
-        # Download the chosen track so the renderer can skip 10s + merge it.
-        if audio_download_url:
-            try:
-                audio_file_path = f"audio-{reel_id}.mp4"
-                st_dl, raw = _http("GET", audio_download_url, timeout=60)
-                if st_dl == 200 and raw and len(raw) > 1000:
-                    with open(audio_file_path, "wb") as f:
-                        f.write(raw)
-                    print(f"  downloaded audio for merge: {audio_file_path} ({len(raw)} bytes)")
-                else:
-                    print(f"  audio download failed (HTTP {st_dl}); rendering without merge.")
-                    audio_file_path = None
-            except Exception as exc:
-                print(f"  audio download error: {exc}; rendering without merge.")
-                audio_file_path = None
-        print(f"  audio to merge+attach: {audio_label or audio_id} (id={audio_id})")
+        print(f"  audio to attach: {audio_label or audio_id}")
 
     print(f"Generating unique 1080x1920 job content card locally on worker for reel #{reel_id}...")
     content_img = generate_local_content_cover(reel)

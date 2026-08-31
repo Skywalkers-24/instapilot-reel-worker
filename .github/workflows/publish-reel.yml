@@ -70,6 +70,7 @@ jobs:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IG_SESSIONID: ${{ secrets.IG_SESSIONID }}
           RELEASE_TAG: reel-media
           KEEP_ASSETS: '5'
           REEL_SECONDS: '12'
