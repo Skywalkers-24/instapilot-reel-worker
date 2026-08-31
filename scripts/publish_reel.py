@@ -407,6 +407,7 @@ def _scrape_audio_candidates_on_runner(candidates: list[dict]) -> list[dict]:
     """Scrape candidate reel counts on the GitHub runner and return results."""
     candidates = [c for c in (candidates or []) if c.get("audio_id")][:AUDIO_SCRAPE_MAX]
     if not candidates:
+        _log("  AUDIT audio_candidates_empty no Instagram audio candidates were provided for scraping")
         return []
 
     try:
@@ -493,6 +494,12 @@ def _choose_audio_from_runner_scrape(reel: dict) -> dict:
                 "download_url": row.get("download_url") or fallback["download_url"],
                 "reel_count": row.get("reel_count"),
             }
+    if fallback["audio_id"]:
+        _log(
+            f"  AUDIT audio_fallback_selected audio_id={fallback['audio_id']} "
+            f"instagram_url=https://www.instagram.com/reels/audio/{fallback['audio_id']}/ "
+            f"label={fallback['audio_label']!r} has_download_url={bool(fallback['download_url'])}"
+        )
     return fallback
 
 
@@ -1411,7 +1418,21 @@ def stage_prepare() -> int:
         return 0
 
     _log(f"Next reel: #{reel['reel_id']} - {reel.get('title')!r}")
-    _log(f"Audio candidates from backend: {len(reel.get('audio_candidates') or [])}")
+    audio_candidates = list(reel.get("audio_candidates") or [])
+    _log(
+        f"Audio selected by backend: audio_id={reel.get('audio_id') or ''} "
+        f"label={reel.get('audio_label') or ''!r} has_download_url={bool(reel.get('audio_download_url'))}"
+    )
+    _log(f"Audio candidates from backend: {len(audio_candidates)}")
+    for idx, c in enumerate(audio_candidates[:AUDIO_SCRAPE_MAX], 1):
+        aid = str(c.get("audio_id") or "")
+        _log(
+            f"  AUDIT backend_audio_candidate[{idx}] "
+            f"audio_id={aid} instagram_url=https://www.instagram.com/reels/audio/{aid}/ "
+            f"title={c.get('title', '')!r} artist={c.get('display_artist', '')!r} "
+            f"match_kind={c.get('match_kind', '')} similarity={c.get('similarity', '')} "
+            f"audio_type={c.get('audio_type', '')} has_download_url={bool(c.get('download_url'))}"
+        )
     _save_state({"skip": False, "reel": reel})
     return 0
 
