@@ -50,8 +50,8 @@ POLL_MAX = int(os.getenv("POLL_MAX", "8"))
 POLL_INTERVAL = float(os.getenv("POLL_INTERVAL", "15"))
 POLL_FIRST_DELAY = float(os.getenv("POLL_FIRST_DELAY", "30"))
 IG_SESSIONID = os.getenv("IG_SESSIONID", "").strip()
-AUDIO_SCRAPE_MAX = min(int(os.getenv("AUDIO_SCRAPE_MAX", "20")), 20)
-AUDIO_SCRAPE_WORKERS = min(int(os.getenv("AUDIO_SCRAPE_WORKERS", "4")), 4)
+AUDIO_SCRAPE_MAX = min(int(os.getenv("AUDIO_SCRAPE_MAX", "10")), 10)
+MIN_AUDIO_REEL_COUNT = 100_000
 STATE_PATH = Path(os.getenv("PUBLISH_STATE_PATH", ".publish_state.json"))
 
 GH_API = "https://api.github.com"
@@ -432,7 +432,7 @@ def _scrape_audio_candidates_on_runner(candidates: list[dict]) -> list[dict]:
     results = scrape_counts(
         [{"audio_id": c["audio_id"], "title": c.get("title", "")} for c in candidates],
         session_id=IG_SESSIONID,
-        workers=min(AUDIO_SCRAPE_WORKERS, len(candidates)),
+        workers=1,
         headless=True,
         per_page_timeout_ms=15000,
         poll_ms=500,
@@ -441,6 +441,8 @@ def _scrape_audio_candidates_on_runner(candidates: list[dict]) -> list[dict]:
     ranked = []
     for c in candidates:
         row = {**c, **(by_id.get(str(c.get("audio_id") or "")) or {})}
+        if not isinstance(row.get("reel_count"), int) and isinstance(c.get("reel_count"), int):
+            row["reel_count"] = c["reel_count"]
         ranked.append(row)
     ranked.sort(key=lambda r: r.get("reel_count") if isinstance(r.get("reel_count"), int) else -1, reverse=True)
     for idx, row in enumerate(ranked, 1):
@@ -462,11 +464,22 @@ def _choose_audio_from_runner_scrape(reel: dict) -> dict:
         "audio_id": reel.get("audio_id") or "",
         "audio_label": reel.get("audio_label") or "",
         "download_url": reel.get("audio_download_url") or "",
-        "reel_count": None,
+        "reel_count": reel.get("audio_reel_count"),
     }
-    ranked = _scrape_audio_candidates_on_runner(reel.get("audio_candidates") or [])
+    backend_candidates = list(reel.get("audio_candidates") or [])
+    ranked = _scrape_audio_candidates_on_runner(backend_candidates)
+    if not ranked:
+        ranked = sorted(
+            backend_candidates,
+            key=lambda row: row.get("reel_count") if isinstance(row.get("reel_count"), int) else -1,
+            reverse=True,
+        )
     for row in ranked:
-        if row.get("audio_id") and row.get("download_url") and isinstance(row.get("reel_count"), int):
+        if (
+            row.get("audio_id")
+            and isinstance(row.get("reel_count"), int)
+            and row["reel_count"] >= MIN_AUDIO_REEL_COUNT
+        ):
             label = f"{row.get('title', '')} - {row.get('display_artist', '')}".strip(" -")
             _log(
                 f"  AUDIT audio_selected audio_id={row['audio_id']} "
@@ -479,28 +492,19 @@ def _choose_audio_from_runner_scrape(reel: dict) -> dict:
                 "download_url": row.get("download_url") or fallback["download_url"],
                 "reel_count": row.get("reel_count"),
             }
-    if ranked:
-        row = ranked[0]
-        if row.get("audio_id") and row.get("download_url"):
-            label = f"{row.get('title', '')} - {row.get('display_artist', '')}".strip(" -")
-            _log(
-                f"  AUDIT audio_selected_no_count audio_id={row['audio_id']} "
-                f"instagram_url=https://www.instagram.com/reels/audio/{row['audio_id']}/ "
-                f"label={label or row['audio_id']!r}"
-            )
-            return {
-                "audio_id": row["audio_id"],
-                "audio_label": label or fallback["audio_label"],
-                "download_url": row.get("download_url") or fallback["download_url"],
-                "reel_count": row.get("reel_count"),
-            }
-    if fallback["audio_id"]:
+    if (
+        fallback["audio_id"]
+        and isinstance(fallback.get("reel_count"), int)
+        and fallback["reel_count"] >= MIN_AUDIO_REEL_COUNT
+    ):
         _log(
             f"  AUDIT audio_fallback_selected audio_id={fallback['audio_id']} "
             f"instagram_url=https://www.instagram.com/reels/audio/{fallback['audio_id']}/ "
             f"label={fallback['audio_label']!r} has_download_url={bool(fallback['download_url'])}"
         )
-    return fallback
+        return fallback
+    _log("  AUDIT no eligible attach-verified audio has at least 100,000 Reel uses")
+    return {}
 
 
 def _download_audio(download_url: str, reel_id: int) -> Path | None:
@@ -1338,7 +1342,7 @@ def render_multi_scene_video(
         print(f"  [FFMPEG SUCCESS] Rendered MP4 output: {out_path} ({out_sz} bytes)")
 
 
-def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "", audio_id: str = "", audio_label: str = "") -> tuple[str, str, str]:
+def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "", audio_id: str = "", audio_label: str = "", audio_reel_count: int = 0, audio_candidates: list[dict] | None = None) -> tuple[str, str, str]:
     payload = {"reel_id": reel_id, "video_url": video_url}
     if cover_url:
         payload["cover_url"] = cover_url
@@ -1346,6 +1350,10 @@ def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "", audio
         payload["audio_id"] = audio_id
     if audio_label:
         payload["audio_label"] = audio_label
+    if audio_reel_count:
+        payload["audio_reel_count"] = audio_reel_count
+    if audio_candidates:
+        payload["audio_candidates"] = audio_candidates[:3]
     st, data = backend_post("/api/cron/ig/create-container", payload)
     if st != 200:
         return "ERROR", "", f"create-container HTTP {st}: {data}"
@@ -1445,6 +1453,9 @@ def stage_scrape_audio() -> int:
     reel = state.get("reel") or {}
     reel_id = reel.get("reel_id")
     chosen_audio = _choose_audio_from_runner_scrape(reel)
+    if not chosen_audio.get("audio_id"):
+        _log("No eligible popular audio is available; stopping before render and publish.")
+        return 1
     audio_id = chosen_audio.get("audio_id") or ""
     audio_label = chosen_audio.get("audio_label") or ""
     audio_file_path = _download_audio(chosen_audio.get("download_url") or "", reel_id)
@@ -1534,11 +1545,14 @@ def stage_publish() -> int:
     cover_public_url = upload.get("cover_public_url") or ""
     audio_id = audio.get("audio_id") or ""
     audio_label = audio.get("audio_label") or ""
+    audio_reel_count = int(audio.get("reel_count") or 0)
 
     _log("Publishing to Instagram via backend endpoints...")
     ig_status, media_id, msg = publish_via_backend(
         reel_id, video_url, cover_url=cover_public_url,
         audio_id=audio_id, audio_label=audio_label,
+        audio_reel_count=audio_reel_count,
+        audio_candidates=list(reel.get("audio_candidates") or []),
     )
     _log(f"IG result: status={ig_status} media_id={media_id} msg={msg}")
 
