@@ -41,9 +41,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Install Playwright Chromium
-        run: python -m playwright install chromium
-
       # Cache a single static ffmpeg binary instead of apt-installing ~99
       # packages every run (that was ~1m40s). First run downloads ~30MB once;
       # every run after restores from cache in a couple of seconds.
@@ -72,22 +69,22 @@ jobs:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          IG_SESSIONID: ${{ secrets.IG_SESSIONID }}
           RELEASE_TAG: reel-media
           KEEP_ASSETS: '5'
-          REEL_SECONDS: '12'
+          REEL_SECONDS: '8'
+          OUTRO_SECONDS: '0'
           FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
         run: python scripts/publish_reel.py --stage prepare
 
-      - name: Scrape and rank audio
+      - name: Select backend-approved audio
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          IG_SESSIONID: ${{ secrets.IG_SESSIONID }}
           RELEASE_TAG: reel-media
           KEEP_ASSETS: '5'
-          REEL_SECONDS: '12'
+          REEL_SECONDS: '8'
+          OUTRO_SECONDS: '0'
           FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
         run: python scripts/publish_reel.py --stage scrape-audio
 
@@ -96,10 +93,10 @@ jobs:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          IG_SESSIONID: ${{ secrets.IG_SESSIONID }}
           RELEASE_TAG: reel-media
           KEEP_ASSETS: '5'
-          REEL_SECONDS: '12'
+          REEL_SECONDS: '8'
+          OUTRO_SECONDS: '0'
           FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
         run: python scripts/publish_reel.py --stage render
 
@@ -108,10 +105,10 @@ jobs:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          IG_SESSIONID: ${{ secrets.IG_SESSIONID }}
           RELEASE_TAG: reel-media
           KEEP_ASSETS: '5'
-          REEL_SECONDS: '12'
+          REEL_SECONDS: '8'
+          OUTRO_SECONDS: '0'
           FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
         run: python scripts/publish_reel.py --stage upload
 
@@ -120,10 +117,10 @@ jobs:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          IG_SESSIONID: ${{ secrets.IG_SESSIONID }}
           RELEASE_TAG: reel-media
           KEEP_ASSETS: '5'
-          REEL_SECONDS: '12'
+          REEL_SECONDS: '8'
+          OUTRO_SECONDS: '0'
           FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
           POLL_FIRST_DELAY: '30'
           POLL_INTERVAL: '15'

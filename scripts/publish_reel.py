@@ -12,7 +12,7 @@ Key Highlights:
    - Scene 1: Verified Opening Hook & Role Alert
    - Scene 2: Content Card with subtle Ken Burns cinematic zoom
    - Scene 3: Accurate Role Specifications & Tech Stack
-   - Scene 4: Clear Official Application CTA (Pinned Comment)
+   - Scene 4: Clear Official Application CTA (First Comment)
 """
 from __future__ import annotations
 
@@ -37,19 +37,16 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPOSITORY", "")  # owner/repo
 RELEASE_TAG = os.getenv("RELEASE_TAG", "reel-media")
 KEEP_ASSETS = int(os.getenv("KEEP_ASSETS", "5"))
-# Job-content section stays 12s (capped). An OUTRO section (default 8s) is
-# appended after it — a full-avatar "Follow @trendyapaa" close — so the whole
-# reel runs CONTENT + OUTRO seconds (default 20s). The merged trending audio
-# spans the full length.
-REEL_SECONDS = min(float(os.getenv("REEL_SECONDS", "12.0")), 12.0)
-OUTRO_SECONDS = min(float(os.getenv("OUTRO_SECONDS", "8.0")), 12.0)
+# A short native-feeling Reel keeps the value proposition inside the first
+# second and removes the previous eight-second follow outro.
+REEL_SECONDS = min(float(os.getenv("REEL_SECONDS", "8.0")), 9.0)
+OUTRO_SECONDS = min(float(os.getenv("OUTRO_SECONDS", "0")), 1.0)
 TOTAL_SECONDS = REEL_SECONDS + OUTRO_SECONDS
 FORCE_PUBLISH = os.getenv("FORCE_PUBLISH", "").strip().lower() in {"1", "true", "yes", "on"}
 
 POLL_MAX = int(os.getenv("POLL_MAX", "8"))
 POLL_INTERVAL = float(os.getenv("POLL_INTERVAL", "15"))
 POLL_FIRST_DELAY = float(os.getenv("POLL_FIRST_DELAY", "30"))
-IG_SESSIONID = os.getenv("IG_SESSIONID", "").strip()
 AUDIO_SCRAPE_MAX = min(int(os.getenv("AUDIO_SCRAPE_MAX", "10")), 10)
 MIN_AUDIO_REEL_COUNT = 100_000
 STATE_PATH = Path(os.getenv("PUBLISH_STATE_PATH", ".publish_state.json"))
@@ -75,6 +72,11 @@ COLOR_ACCENT_ORANGE = (255, 106, 0)  # Warm Converting Orange
 COLOR_TEXT_WHITE = (255, 255, 255)
 COLOR_TEXT_MUTED = (160, 175, 200)
 COLOR_TEXT_SUB = (140, 155, 180)
+
+
+def _clean_display_text(value: object, fallback: str = "") -> str:
+    """Turn database/search slugs into human-readable on-screen copy."""
+    return re.sub(r"[_\s]+", " ", str(value or fallback)).strip()
 
 
 def _http(method: str, url: str, *, headers=None, data=None, timeout=60):
@@ -390,120 +392,28 @@ def get_ffmpeg_exe() -> str:
         return "ffmpeg"
 
 
-def _ensure_playwright_chromium() -> None:
-    try:
-        subprocess.run(
-            [sys.executable, "-m", "playwright", "install", "chromium"],
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=180,
-        )
-    except Exception:
-        pass
-
-
-def _scrape_audio_candidates_on_runner(candidates: list[dict]) -> list[dict]:
-    """Scrape candidate reel counts on the GitHub runner and return results."""
-    candidates = [c for c in (candidates or []) if c.get("audio_id")][:AUDIO_SCRAPE_MAX]
-    if not candidates:
-        _log("  AUDIT audio_candidates_empty no Instagram audio candidates were provided for scraping")
-        return []
-
-    try:
-        scripts_dir = Path(__file__).resolve().parent
-        if str(scripts_dir) not in sys.path:
-            sys.path.insert(0, str(scripts_dir))
-        from scrape_audio_reel_counts import scrape_counts  # type: ignore
-    except Exception as exc:
-        print(f"  audio scrape unavailable on runner: {exc}")
-        return []
-
-    _ensure_playwright_chromium()
-    _log(f"  scraping {len(candidates)} audio candidate(s) on GitHub runner...")
-    for idx, c in enumerate(candidates, 1):
-        aid = str(c.get("audio_id") or "")
-        _log(
-            f"  AUDIT audio_candidate[{idx}] "
-            f"audio_id={aid} instagram_url=https://www.instagram.com/reels/audio/{aid}/ "
-            f"title={c.get('title', '')!r} artist={c.get('display_artist', '')!r} "
-            f"audio_type={c.get('audio_type', '')} has_download_url={bool(c.get('download_url'))}"
-        )
-    results = scrape_counts(
-        [{"audio_id": c["audio_id"], "title": c.get("title", "")} for c in candidates],
-        session_id=IG_SESSIONID,
-        workers=1,
-        headless=True,
-        per_page_timeout_ms=15000,
-        poll_ms=500,
-    )
-    by_id = {str(r.get("audio_id") or ""): r for r in results}
-    ranked = []
-    for c in candidates:
-        row = {**c, **(by_id.get(str(c.get("audio_id") or "")) or {})}
-        if not isinstance(row.get("reel_count"), int) and isinstance(c.get("reel_count"), int):
-            row["reel_count"] = c["reel_count"]
-        ranked.append(row)
-    ranked.sort(key=lambda r: r.get("reel_count") if isinstance(r.get("reel_count"), int) else -1, reverse=True)
-    for idx, row in enumerate(ranked, 1):
-        count = row.get("reel_count")
-        aid = str(row.get("audio_id") or "")
-        _log(
-            f"  AUDIT audio_scrape_result[{idx}] "
-            f"audio_id={aid} instagram_url=https://www.instagram.com/reels/audio/{aid}/ "
-            f"status={row.get('status', 'unknown')} reel_count={count if count is not None else '-'} "
-            f"count_field={row.get('count_field', '')} elapsed_s={row.get('elapsed_s', '')} "
-            f"title={row.get('title', '')!r} scraped_title={row.get('scraped_title', '')!r}"
-        )
-    return ranked
-
-
 def _choose_audio_from_runner_scrape(reel: dict) -> dict:
-    """Pick the highest-count scraped candidate; fall back to next-reel audio."""
-    fallback = {
-        "audio_id": reel.get("audio_id") or "",
-        "audio_label": reel.get("audio_label") or "",
-        "download_url": reel.get("audio_download_url") or "",
-        "reel_count": reel.get("audio_reel_count"),
-    }
-    backend_candidates = list(reel.get("audio_candidates") or [])
-    ranked = _scrape_audio_candidates_on_runner(backend_candidates)
-    if not ranked:
-        ranked = sorted(
-            backend_candidates,
-            key=lambda row: row.get("reel_count") if isinstance(row.get("reel_count"), int) else -1,
-            reverse=True,
-        )
-    for row in ranked:
-        if (
-            row.get("audio_id")
-            and isinstance(row.get("reel_count"), int)
-            and row["reel_count"] >= MIN_AUDIO_REEL_COUNT
-        ):
+    """Choose only a backend-approved candidate; never scrape Instagram here."""
+    backend_candidates = list(reel.get("audio_candidates") or [])[:AUDIO_SCRAPE_MAX]
+    for row in backend_candidates:
+        count = row.get("reel_count")
+        trusted = bool(row.get("popularity_verified"))
+        if row.get("audio_id") and (trusted or (isinstance(count, int) and count >= MIN_AUDIO_REEL_COUNT)):
             label = f"{row.get('title', '')} - {row.get('display_artist', '')}".strip(" -")
             _log(
                 f"  AUDIT audio_selected audio_id={row['audio_id']} "
                 f"instagram_url=https://www.instagram.com/reels/audio/{row['audio_id']}/ "
-                f"reel_count={row['reel_count']} label={label or row['audio_id']!r}"
+                f"source={row.get('source', '')} reel_count={count if count is not None else '-'} "
+                f"trend_rank={row.get('trend_rank') or '-'} label={label or row['audio_id']!r}"
             )
             return {
                 "audio_id": row["audio_id"],
-                "audio_label": label or fallback["audio_label"],
-                "download_url": row.get("download_url") or fallback["download_url"],
-                "reel_count": row.get("reel_count"),
+                "audio_label": label,
+                "download_url": "",
+                "reel_count": count,
+                "source": row.get("source") or "",
             }
-    if (
-        fallback["audio_id"]
-        and isinstance(fallback.get("reel_count"), int)
-        and fallback["reel_count"] >= MIN_AUDIO_REEL_COUNT
-    ):
-        _log(
-            f"  AUDIT audio_fallback_selected audio_id={fallback['audio_id']} "
-            f"instagram_url=https://www.instagram.com/reels/audio/{fallback['audio_id']}/ "
-            f"label={fallback['audio_label']!r} has_download_url={bool(fallback['download_url'])}"
-        )
-        return fallback
-    _log("  AUDIT no eligible attach-verified audio has at least 100,000 Reel uses")
+    _log("  AUDIT no backend-approved attachable audio candidate is available")
     return {}
 
 
@@ -648,8 +558,8 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
     text_primary_rgb = (255, 255, 255)
     text_muted_rgb = (148, 163, 184)
 
-    company = (reel_info.get("company") or "Top Tech Company").strip()
-    role = (reel_info.get("role") or reel_info.get("title") or "Software Engineer").strip()
+    company = _clean_display_text(reel_info.get("company"), "Top Tech Company")
+    role = _clean_display_text(reel_info.get("role") or reel_info.get("title"), "Software Engineer")
     location = (reel_info.get("location") or "India (Hybrid / Remote)").strip()
     exp = (reel_info.get("experience_label") or "0-3 Years Exp").strip()
     package = (reel_info.get("salary_text") or "Competitive CTC").strip()
@@ -771,7 +681,7 @@ def generate_local_content_cover(reel_info: dict) -> Image.Image:
 
     cta_top, cta_h = 1676, 156
     draw.rounded_rectangle((SAFE_MARGIN_X, cta_top, SAFE_MARGIN_X + CONTENT_WIDTH, cta_top + cta_h), radius=28, fill=accent_rgb)
-    cta_str = "APPLY LINK IN 1ST PINNED COMMENT  →"
+    cta_str = "OFFICIAL LINK IN FIRST COMMENT  →"
     _draw_centered_text(draw, (SAFE_MARGIN_X, cta_top, SAFE_MARGIN_X + CONTENT_WIDTH, cta_top + cta_h), cta_str, 38, bg_rgb)
 
     font_src = get_font(14, bold=True)
@@ -941,17 +851,17 @@ def render_multi_scene_video(
     Renders high-definition motion reel with authentic human-curated editorial scenes.
     Eliminates robotic AI voice and fake bot spam scripts.
 
-    Layout: `duration` seconds of job-content scenes (capped 12s), followed by
-    `outro_seconds` of a full-avatar "Follow @trendyapaa" close (2 scenes). The
-    merged trending audio spans the full content+outro length.
+    Layout: a short job-value sequence with the company and role visible in
+    the first second. Instagram attaches the selected catalog audio during
+    container creation; the rendered file carries a silent AAC track.
     """
     # Job-content section stays capped at 12s; the outro is appended after it.
     content_seconds = min(float(duration or REEL_SECONDS), 12.0)
     outro_seconds = max(0.0, min(float(outro_seconds or 0.0), 12.0))
     total_seconds = content_seconds + outro_seconds
     ffmpeg_bin = get_ffmpeg_exe()
-    company = (reel_info.get("company") or "Top Tech Company").strip()
-    role = (reel_info.get("role") or reel_info.get("title") or "Software Engineer").strip()
+    company = _clean_display_text(reel_info.get("company"), "Top Tech Company")
+    role = _clean_display_text(reel_info.get("role") or reel_info.get("title"), "Software Engineer")
     location = (reel_info.get("location") or "India (Hybrid / Remote)").strip()
     exp = (reel_info.get("experience_label") or "0-3 Years Exp").strip()
     package = (reel_info.get("salary_text") or "Competitive CTC").strip()
@@ -1127,33 +1037,32 @@ def render_multi_scene_video(
             card_draw.rounded_rectangle((0, 0, inner_w, card_h), radius=32, fill=COLOR_CARD_BG, outline=COLOR_CARD_BORDER, width=2)
             img.paste(card_surface, (margin, card_y), card_surface)
 
-            av_x = (W - 252) // 2
-            av_y = card_y + 48
-            img.paste(face_lg, (av_x, av_y), face_lg)
-            draw.ellipse((av_x, av_y, av_x + 252, av_y + 252), outline=COLOR_ACCENT_ORANGE, width=4)
-
             pill_w = max(240, draw.textbbox((0, 0), badge_text, font=FONT_BADGE)[2] + 48)
-            rounded_rect(draw, ((W - pill_w) // 2, card_y + 336, ((W + pill_w) // 2), card_y + 378), 16, COLOR_ACCENT_ORANGE)
-            draw.text(((W - draw.textbbox((0, 0), badge_text, font=FONT_BADGE)[2]) // 2, card_y + 346), badge_text, font=FONT_BADGE, fill=COLOR_TEXT_WHITE)
+            rounded_rect(draw, ((W - pill_w) // 2, card_y + 54, ((W + pill_w) // 2), card_y + 96), 16, COLOR_ACCENT_ORANGE)
+            draw.text(((W - draw.textbbox((0, 0), badge_text, font=FONT_BADGE)[2]) // 2, card_y + 64), badge_text, font=FONT_BADGE, fill=COLOR_TEXT_WHITE)
 
-            intro_text = "Verified Career Opening"
-            draw.text(((W - draw.textbbox((0, 0), intro_text, font=FONT_TITLE)[2]) // 2, card_y + 410), intro_text, font=FONT_TITLE, fill=COLOR_TEXT_WHITE)
+            intro_text = "NOW HIRING"
+            draw.text(((W - draw.textbbox((0, 0), intro_text, font=FONT_HERO)[2]) // 2, card_y + 156), intro_text, font=FONT_HERO, fill=COLOR_ACCENT)
 
-            comp_text = f"{company} is hiring"
-            comp_fnt, comp_lines = get_best_fit_font(draw, comp_text, inner_w - 70, 94, start_size=46, min_size=30, bold=True, max_lines=1)
+            comp_text = company.upper()
+            comp_fnt, comp_lines = get_best_fit_font(draw, comp_text, inner_w - 70, 120, start_size=56, min_size=30, bold=True, max_lines=2)
             tw = draw.textbbox((0, 0), comp_lines[0], font=comp_fnt)[2]
-            draw.text(((W - tw) // 2, card_y + 474), comp_lines[0], font=comp_fnt, fill=COLOR_ACCENT)
+            draw.text(((W - tw) // 2, card_y + 244), comp_lines[0], font=comp_fnt, fill=COLOR_TEXT_WHITE)
 
-            role_fnt, role_lines = get_best_fit_font(draw, role, inner_w - 70, 146, start_size=38, min_size=24, bold=True, max_lines=2)
-            y_role = card_y + 548
+            role_fnt, role_lines = get_best_fit_font(draw, role, inner_w - 70, 190, start_size=48, min_size=26, bold=True, max_lines=2)
+            y_role = card_y + 378
             for r_line in role_lines:
                 rtw = draw.textbbox((0, 0), r_line, font=role_fnt)[2]
                 draw.text(((W - rtw) // 2, y_role), r_line, font=role_fnt, fill=COLOR_TEXT_WHITE)
                 y_role += draw.textbbox((0, 0), r_line, font=role_fnt)[3] + 10
 
-            rounded_rect(draw, (margin + 32, card_y + 780, W - margin - 32, card_y + 886), 20, (30, 38, 58), outline=COLOR_ACCENT, width=1)
-            apply_hint = "Official direct application link in pinned comment"
-            draw.text(((W - draw.textbbox((0, 0), apply_hint, font=FONT_BODY)[2]) // 2, card_y + 816), apply_hint, font=FONT_BODY, fill=COLOR_TEXT_WHITE)
+            details = f"{exp}  •  {location}"
+            detail_fnt, detail_lines = get_best_fit_font(draw, details, inner_w - 90, 100, start_size=28, min_size=18, bold=True, max_lines=2)
+            draw.text(((W - draw.textbbox((0, 0), detail_lines[0], font=detail_fnt)[2]) // 2, card_y + 594), detail_lines[0], font=detail_fnt, fill=COLOR_TEXT_MUTED)
+            rounded_rect(draw, (margin + 32, card_y + 770, W - margin - 32, card_y + 886), 20, COLOR_ACCENT, outline=COLOR_ACCENT, width=1)
+            apply_hint = "OFFICIAL APPLICATION LINK IN FIRST COMMENT"
+            hint_fnt, hint_lines = get_best_fit_font(draw, apply_hint, inner_w - 100, 56, start_size=24, min_size=16, bold=True, max_lines=1)
+            draw.text(((W - draw.textbbox((0, 0), hint_lines[0], font=hint_fnt)[2]) // 2, card_y + 812), hint_lines[0], font=hint_fnt, fill=(12, 16, 26))
 
         elif scene_name == "content_card":
             card_surface = Image.new("RGBA", (inner_w, card_h), (20, 25, 38, 245))
@@ -1238,7 +1147,7 @@ def render_multi_scene_video(
 
             # 3. Three Spacious Instruction Steps (y: 348..796, 3 cards x 136h + 16 gap)
             step_cards = [
-                ("STEP 1", "1st Pinned Comment on this Reel", "Direct official link to employer career portal", True),
+                ("STEP 1", "Open the First Comment", "Direct official link to employer career portal", True),
                 ("STEP 2", "Verified Official Application", "Zero third-party forms • Official ATS drive", False),
                 ("STEP 3", f"Follow {CHANNEL_HANDLE} for Daily Roles", "Hand-curated top engineering & tech hiring drives", False),
             ]
@@ -1282,7 +1191,7 @@ def render_multi_scene_video(
                 # content window (so appending the outro never rescales them).
                 cur_sec = i / FPS
                 rel_t = cur_sec / max(1.0, content_seconds)
-                if rel_t < 0.22:
+                if rel_t < 0.30:
                     scene_name = "intro_hook"
                 elif rel_t < 0.48:
                     scene_name = "content_card"
@@ -1342,7 +1251,7 @@ def render_multi_scene_video(
         print(f"  [FFMPEG SUCCESS] Rendered MP4 output: {out_path} ({out_sz} bytes)")
 
 
-def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "", audio_id: str = "", audio_label: str = "", audio_reel_count: int = 0, audio_candidates: list[dict] | None = None) -> tuple[str, str, str]:
+def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "", audio_id: str = "", audio_label: str = "", audio_reel_count: int = 0, audio_candidates: list[dict] | None = None) -> tuple[str, str, str, str, str, str]:
     payload = {"reel_id": reel_id, "video_url": video_url}
     if cover_url:
         payload["cover_url"] = cover_url
@@ -1356,17 +1265,18 @@ def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "", audio
         payload["audio_candidates"] = audio_candidates[:3]
     st, data = backend_post("/api/cron/ig/create-container", payload)
     if st != 200:
-        return "ERROR", "", f"create-container HTTP {st}: {data}"
+        return "ERROR", "", f"create-container HTTP {st}: {data}", "", "", ""
     status = data.get("status", "")
     if status in ("DRY_RUN",):
-        return "DRY_RUN", "", data.get("message", "Dry run.")
+        return "DRY_RUN", "", data.get("message", "Dry run."), "", "", ""
     if status not in ("CREATED",):
-        return status or "ERROR", "", data.get("message", "container create failed")
+        return status or "ERROR", "", data.get("message", "container create failed"), "", "", ""
     container_id = data.get("container_id", "")
     if not container_id:
-        return "ERROR", "", "no container_id returned"
+        return "ERROR", "", "no container_id returned", "", "", ""
     audio_label = data.get("audio") or ""
     audio_id_used = data.get("audio_id") or ""
+    audio_source_used = data.get("audio_source") or ""
     if audio_id_used:
         _log(f"  audio attached: {audio_label or audio_id_used} (id={audio_id_used})")
     else:
@@ -1386,18 +1296,18 @@ def publish_via_backend(reel_id: int, video_url: str, cover_url: str = "", audio
             if code == "FINISHED":
                 break
             if code in ("ERROR", "EXPIRED"):
-                return code, "", f"container processing {code}"
+                return code, "", f"container processing {code}", audio_id_used, audio_label, audio_source_used
         else:
             _log(f"  status check HTTP {st} (attempt {attempt+1}); retrying")
         if attempt < POLL_MAX - 1:
             time.sleep(POLL_INTERVAL)
     else:
-        return "IN_PROGRESS", "", "Container did not finish within polling window."
+        return "IN_PROGRESS", "", "Container did not finish within polling window.", audio_id_used, audio_label, audio_source_used
 
     st, data = backend_post("/api/cron/ig/publish", {"reel_id": reel_id, "container_id": container_id})
     if st != 200:
-        return "ERROR", "", f"publish HTTP {st}: {data}"
-    return data.get("status", "ERROR"), data.get("media_id", ""), data.get("message", "")
+        return "ERROR", "", f"publish HTTP {st}: {data}", audio_id_used, audio_label, audio_source_used
+    return data.get("status", "ERROR"), data.get("media_id", ""), data.get("message", ""), audio_id_used, audio_label, audio_source_used
 
 
 def stage_prepare() -> int:
@@ -1458,14 +1368,15 @@ def stage_scrape_audio() -> int:
         return 1
     audio_id = chosen_audio.get("audio_id") or ""
     audio_label = chosen_audio.get("audio_label") or ""
-    audio_file_path = _download_audio(chosen_audio.get("download_url") or "", reel_id)
     if audio_id:
         _log(f"  audio to attach: {audio_label or audio_id}")
     state["audio"] = {
         **chosen_audio,
         "audio_id": audio_id,
         "audio_label": audio_label,
-        "audio_file_path": str(audio_file_path or ""),
+        # Never download or bake catalog music into the public worker output.
+        # Meta attaches the approved catalog audio to the creation container.
+        "audio_file_path": "",
     }
     _save_state(state)
     return 0
@@ -1548,7 +1459,7 @@ def stage_publish() -> int:
     audio_reel_count = int(audio.get("reel_count") or 0)
 
     _log("Publishing to Instagram via backend endpoints...")
-    ig_status, media_id, msg = publish_via_backend(
+    ig_status, media_id, msg, attached_audio_id, attached_audio_label, attached_audio_source = publish_via_backend(
         reel_id, video_url, cover_url=cover_public_url,
         audio_id=audio_id, audio_label=audio_label,
         audio_reel_count=audio_reel_count,
@@ -1559,6 +1470,11 @@ def stage_publish() -> int:
     _st, mark = backend_post("/api/cron/mark-published", {
         "reel_id": reel_id, "video_url": video_url,
         "media_id": media_id, "status": ig_status, "error": msg,
+        "audio_id": attached_audio_id,
+        "audio_label": attached_audio_label,
+        "audio_source": attached_audio_source,
+        "template_key": "short_job_value_v1",
+        "duration_seconds": TOTAL_SECONDS,
     })
     if isinstance(mark, dict) and mark.get("media_audio_type"):
         _log(f"  media_audio_type: {mark.get('media_audio_type')}")
