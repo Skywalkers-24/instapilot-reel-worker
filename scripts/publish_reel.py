@@ -79,7 +79,7 @@ def _clean_display_text(value: object, fallback: str = "") -> str:
     return re.sub(r"[_\s]+", " ", str(value or fallback)).strip()
 
 
-def _http(method: str, url: str, *, headers=None, data=None, timeout=60):
+def _http(method: str, url: str, *, headers=None, data=None, timeout=120):
     req = urllib.request.Request(url, method=method, data=data)
     for k, v in (headers or {}).items():
         req.add_header(k, v)
