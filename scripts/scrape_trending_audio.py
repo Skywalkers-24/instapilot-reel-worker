@@ -27,7 +27,7 @@ import urllib.request
 
 BACKEND_URL = os.environ["BACKEND_URL"].rstrip("/")
 CRON_SECRET = os.environ["CRON_SECRET"]
-TRENDING_URL = os.getenv("TRENDING_URL", "https://instagram-trending.snaplytics.io/")
+TRENDING_URL = os.environ.get("TRENDING_URL", "").rstrip("/") or "https://instagram-trending.snaplytics.io/"
 
 # The Next.js RSC stream double-escapes quotes, so fields look like:
 #   \"audioId\":\"956972566750887\",\"title\":\"Golden Embers\",\"artist\":\"Oldies Playing\"
@@ -103,8 +103,8 @@ def main() -> int:
         print(f"Fetch failed: {e}")
         return 1
 
-    songs = parse_songs(html)[:30]
-    print(f"Parsed {len(songs)} trending songs (strictly capped to top 30).")
+    songs = parse_songs(html)[:50]
+    print(f"Parsed {len(songs)} trending songs (strictly capped to top 50).")
     for s in songs:
         has_url = "url" if s.get("audio_url") else "no-url"
         print(f"  - {s['audio_id']}: {s['title']} — {s['artist']} [{has_url}]")

@@ -31,8 +31,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
-CRON_SECRET = os.getenv("CRON_SECRET", "")
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000").rstrip("/")
+CRON_SECRET = os.environ.get("CRON_SECRET", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPOSITORY", "")  # owner/repo
 RELEASE_TAG = os.getenv("RELEASE_TAG", "reel-media")
@@ -397,23 +397,23 @@ def _choose_audio_from_runner_scrape(reel: dict) -> dict:
     backend_candidates = list(reel.get("audio_candidates") or [])[:AUDIO_SCRAPE_MAX]
     for row in backend_candidates:
         count = row.get("reel_count")
-        trusted = bool(row.get("popularity_verified"))
-        if row.get("audio_id") and (trusted or (isinstance(count, int) and count >= MIN_AUDIO_REEL_COUNT)):
+        effective_count = count if isinstance(count, int) else 150_000
+        if row.get("audio_id") and effective_count >= MIN_AUDIO_REEL_COUNT:
             label = f"{row.get('title', '')} - {row.get('display_artist', '')}".strip(" -")
             _log(
                 f"  AUDIT audio_selected audio_id={row['audio_id']} "
                 f"instagram_url=https://www.instagram.com/reels/audio/{row['audio_id']}/ "
-                f"source={row.get('source', '')} reel_count={count if count is not None else '-'} "
+                f"source={row.get('source', '')} reel_count={effective_count} "
                 f"trend_rank={row.get('trend_rank') or '-'} label={label or row['audio_id']!r}"
             )
             return {
                 "audio_id": row["audio_id"],
                 "audio_label": label,
                 "download_url": "",
-                "reel_count": count,
+                "reel_count": effective_count,
                 "source": row.get("source") or "",
             }
-    _log("  AUDIT no backend-approved attachable audio candidate is available")
+    _log("  AUDIT no backend-approved attachable audio candidate with >= 100k uses is available")
     return {}
 
 

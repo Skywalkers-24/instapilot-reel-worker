@@ -28,4 +28,5 @@ jobs:
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          TRENDING_URL: ${{ secrets.TRENDING_URL }}
         run: python scripts/scrape_trending_audio.py
