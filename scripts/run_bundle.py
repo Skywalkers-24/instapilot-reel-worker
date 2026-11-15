@@ -28,7 +28,9 @@ def upload(video,source_hash,artifact):
 
 
 def main():
-    state=call('publish/next');status=state.get('status');print('Eligibility:',status,flush=True)
+    force = os.getenv('FORCE_PUBLISH', '').lower() in ('true', '1')
+    endpoint = 'publish/next?force=true' if force else 'publish/next'
+    state=call(endpoint);status=state.get('status');print('Eligibility:',status,flush=True)
     if status in ('DISABLED','OUTSIDE_SLOT','SLOT_ALREADY_CLAIMED','CADENCE_SKIP','DAILY_LIMIT'):
         return
     if status=='PUBLISHED':print('Already published for this workflow run');return
@@ -41,7 +43,8 @@ def main():
         metadata=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_format','-of','json',str(video)]))
         duration=float(metadata['format']['duration'])
         url=upload(video,selection['source_sha256'],artifact)
-        state=call('publish/register',{'source_sha256':selection['source_sha256'],'artifact_sha256':artifact,
+        reg_endpoint = 'publish/register?force=true' if force else 'publish/register'
+        state=call(reg_endpoint,{'source_sha256':selection['source_sha256'],'artifact_sha256':artifact,
                    'archive':selection['archive'],'member':selection['member'],'video_url':url,'duration':duration})
         if state.get('status') in ('OUTSIDE_SLOT','SLOT_ALREADY_CLAIMED','CADENCE_SKIP','DAILY_LIMIT'):return
     if state.get('status')=='CLAIMED':state=call('publish/create',{})
