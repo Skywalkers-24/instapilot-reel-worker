@@ -7,7 +7,8 @@ from urllib.parse import urlencode
 
 def call(path, payload=None):
     query = urlencode({'audience': 'instapilot-bundle-worker'})
-    url = os.environ['ACTIONS_ID_TOKEN_REQUEST_URL'] + '&' + query
+    base = os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']
+    url = base + ('&' if '?' in base else '?') + query
     request = urllib.request.Request(url, headers={
         'Authorization': 'Bearer ' + os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']})
     with urllib.request.urlopen(request, timeout=30) as response:

@@ -1,0 +1,59 @@
+{
+  "bundles": [
+    {
+      "archive": "600+ AI Gibili Style Reel Bundle -20261115T163222Z-1-001.zip",
+      "video_entries": 173,
+      "duration_decode_valid_entries": 171,
+      "unique_duration_decode_valid": 168,
+      "available_before_watermark_screening": 167,
+      "exact_duplicates": 3,
+      "too_short": 2,
+      "known_excluded": 1
+    },
+    {
+      "archive": "By @reelbundlez 1000+ AI skeleton reelbundle-20261115T162701Z-1-001.zip",
+      "video_entries": 1021,
+      "duration_decode_valid_entries": 958,
+      "unique_duration_decode_valid": 958,
+      "available_before_watermark_screening": 958,
+      "too_short": 63
+    },
+    {
+      "archive": "Mini car unboxing reels-20261115T161446Z-1-001.zip",
+      "video_entries": 202,
+      "duration_decode_valid_entries": 202,
+      "unique_duration_decode_valid": 179,
+      "available_before_watermark_screening": 178,
+      "exact_duplicates": 23,
+      "already_reserved_or_published": 1
+    },
+    {
+      "archive": "Pookie voice reels-20261115T161653Z-1-001.zip",
+      "video_entries": 257,
+      "duration_decode_valid_entries": 257,
+      "unique_duration_decode_valid": 256,
+      "available_before_watermark_screening": 255,
+      "exact_duplicates": 1,
+      "known_excluded": 1
+    },
+    {
+      "archive": "Premium -20261115T161638Z-1-001.zip",
+      "video_entries": 84,
+      "duration_decode_valid_entries": 84,
+      "unique_duration_decode_valid": 84,
+      "available_before_watermark_screening": 84
+    }
+  ],
+  "totals": {
+    "video_entries": 1737,
+    "duration_decode_valid_entries": 1672,
+    "unique_duration_decode_valid": 1645,
+    "available_before_watermark_screening": 1642,
+    "exact_duplicates": 27,
+    "too_short": 65,
+    "known_excluded": 2,
+    "already_reserved_or_published": 1
+  },
+  "scope": "Metadata + >5 seconds + first-frame decode + exact-byte deduplication. Watermark screening still required before publishing. Not a full-stream corruption or perceptual-duplicate audit.",
+  "audit_date": "2026-11-15"
+}

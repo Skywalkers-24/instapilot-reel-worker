@@ -16,6 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--backend-ledger', action='store_true')
+    parser.add_argument('--max-candidates',type=int,default=30)
+    parser.add_argument('--seed',type=int,default=0)
     parser.add_argument('--history', type=Path,
                         help='JSON list of source SHA256 hashes already reserved or published')
     parser.add_argument('--output', type=Path, default=ROOT / 'bundle-output')
@@ -28,7 +30,11 @@ def main():
     sources = ROOT / 'bundles'
     sources.mkdir(exist_ok=True)
     args.output.mkdir(parents=True, exist_ok=True)
-    for archive in manifest['archives']:
+    attempts=0
+    archives=manifest['archives']
+    offset=args.seed%len(archives)
+    archives=archives[offset:]+archives[:offset]
+    for archive in archives:
         path = sources / archive['asset']
         if not path.exists():
             subprocess.run(['gh', 'release', 'download', manifest['release_tag'],
@@ -64,6 +70,9 @@ def main():
                     duration = float(info.get('format', {}).get('duration', 0))
                     if duration <= 5 or not any(s['codec_type'] == 'video' for s in info['streams']):
                         continue
+                    attempts+=1
+                    if attempts>args.max_candidates:
+                        raise SystemExit('Candidate limit reached; no clip published')
                     destination = args.output / f'{source_hash}.mp4'
                     candidate.replace(destination)
                     rendered = args.output / f'{source_hash}-rendered.mp4'

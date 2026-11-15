@@ -2,6 +2,7 @@
 import argparse
 import csv
 import math
+import os
 import io
 import json
 from pathlib import Path
@@ -11,6 +12,7 @@ import tempfile
 from PIL import Image
 from brand_overlay import create_brand_overlay
 from source_exclusions import exclusions, source_digest, fixed_regions
+from logo_templates import logo_candidates
 from watermark_detection import text_candidate, sparkle_candidates, stable_regions, youtube_candidates, timed_text_regions, exclusion_reason
 
 
@@ -44,11 +46,14 @@ def process(source, output, report, max_seconds=30):
         # Sample the portion that will actually be rendered at up to two frames/second.
         sample_count=max(12,min(60,math.ceil(duration*2)))
         step=duration/sample_count
+        # Decode the source once for all samples instead of seeking once per image.
+        run(['ffmpeg','-v','error','-filter_threads','1','-threads',os.getenv('REEL_FFMPEG_THREADS','2'),
+             '-i',str(source),'-t',str(duration),'-vf',
+             f'fps={sample_count/duration:.8f},scale=1080:-2',
+             '-frames:v',str(sample_count),'-start_number','0',str(temp/'%d.png')])
         for index in range(sample_count):
             timestamp=step*(index+.5)
             frame = temp / f'{index}.png'
-            run(['ffmpeg', '-v', 'error', '-ss', str(timestamp),
-                 '-i', str(source), '-frames:v', '1', '-vf', 'scale=1080:-2', str(frame)])
             if not frame.exists():
                 continue
             with Image.open(frame) as image:
@@ -59,23 +64,26 @@ def process(source, output, report, max_seconds=30):
                 if finding:
                     findings.append({**finding, 'sample':index, 'time':timestamp})
             with Image.open(frame) as image:
-                findings.extend({**f, 'sample':index, 'time':timestamp} for f in sparkle_candidates(image)+youtube_candidates(image))
+                findings.extend({**f, 'sample':index, 'time':timestamp} for f in sparkle_candidates(image)+youtube_candidates(image)+logo_candidates(image))
         reviewed=fixed_regions(digest,1080,frame_height)
-        reason=exclusion_reason(findings,1080,frame_height) if not reviewed else None
+        reason=exclusion_reason(findings,1080,frame_height)
         if reason:
             report.parent.mkdir(parents=True,exist_ok=True)
             report.write_text(json.dumps({'status':'excluded','reason':reason,'findings':findings,'source_sha256':digest},indent=2))
             return False
         regions = stable_regions([f for f in findings if f['kind']!='creator_text'],1080,frame_height)
         regions += timed_text_regions(findings,1080,frame_height,step,duration)
-        if reviewed:
+        if reviewed and not any(r['kind'] in ('af_logo','itzzgoru_logo') for r in regions):
             regions=reviewed
         budget_exceeded = any(
             sum(r['box'][2]*r['box'][3] for r in regions
                 if 'start' not in r or r['start'] <= step*(i+.5) < r['end'])
             > 1080*frame_height*.04 for i in range(sample_count))
-        if budget_exceeded:
-            regions = []
+        if budget_exceeded or sum(r['kind']=='gemini_sparkle' for r in regions)>1:
+            report.parent.mkdir(parents=True,exist_ok=True)
+            report.write_text(json.dumps({'status':'excluded','reason':'Ambiguous graphic detections or mask budget exceeded',
+                                         'findings':findings,'regions':regions,'source_sha256':digest},indent=2))
+            return False
         result = {'source': str(source), 'ocr_samples': sample_count, 'findings': findings, 'regions':regions,
                   'status': 'rendering', 'mask_budget_exceeded':budget_exceeded,
                   'limitation': 'Unknown graphics and low-confidence text can remain. Fast motion between samples can leave residual marks.'}
@@ -94,10 +102,11 @@ def process(source, output, report, max_seconds=30):
         brand_path = temp / 'brand.png'
         branding.save(brand_path)
         rendered = temp / 'render.mp4'
-        run(['ffmpeg', '-v', 'error', '-i', str(source), '-i', str(brand_path), '-t', str(duration), '-filter_complex',
+        codec_options=['-c:v','libx264','-crf','20','-preset',os.getenv('REEL_RENDER_PRESET','medium'),
+                       '-threads',os.getenv('REEL_FFMPEG_THREADS','2')]
+        run(['ffmpeg', '-v', 'error', '-filter_complex_threads', '1', '-threads', os.getenv('REEL_FFMPEG_THREADS','2'), '-i', str(source), '-i', str(brand_path), '-t', str(duration), '-filter_complex',
              f'[0:v]{filters}[base];[base][1:v]overlay=W-w-32:H-h-100[v]',
-             '-map', '[v]', '-map', '0:a:0?', '-r', '30',
-             '-c:v', 'libx264', '-crf', '20', '-preset', 'medium', '-pix_fmt', 'yuv420p',
+             '-map', '[v]', '-map', '0:a:0?', '-r', '30', *codec_options, '-pix_fmt', 'yuv420p',
              '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', str(rendered)])
         final = probe(rendered)
         stream = next(s for s in final['streams'] if s['codec_type'] == 'video')

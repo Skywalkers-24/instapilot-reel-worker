@@ -130,6 +130,8 @@ def exclusion_reason(findings,width,height):
         text=finding.get('text','').strip().lower()
         if finding['kind']=='creator_text':
             tracks.setdefault(text,[]).append(finding)
+        elif finding['kind'] in ('af_logo','itzzgoru_logo','youtube_badge'):
+            tracks.setdefault(finding['kind'],[]).append(finding)
     for text,track in tracks.items():
         if len({f['sample'] for f in track})<3:continue
         xs=[f['box'][0]+f['box'][2]/2 for f in track]

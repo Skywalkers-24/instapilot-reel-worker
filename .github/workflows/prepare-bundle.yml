@@ -1,21 +1,16 @@
-name: Prepare Bundle Reel
+name: Process and Publish Bundle Reel
 on:
   workflow_dispatch:
-    inputs:
-      reserved_or_published_hashes:
-        description: 'JSON list of all reserved or published source SHA256 hashes'
-        required: true
-        default: '[]'
 permissions:
-  contents: read
+  contents: write
   id-token: write
 concurrency:
-  group: bundle-prepare
+  group: publish-reel
   cancel-in-progress: false
 jobs:
-  prepare:
+  publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -23,32 +18,24 @@ jobs:
           python-version: '3.12'
       - name: Install video and OCR tools
         run: sudo apt-get update && sudo apt-get install -y ffmpeg tesseract-ocr fonts-dejavu-core
-      - name: Install image dependency
-        run: pip install Pillow "opencv-python-headless>=4.10,<5"
-      - name: Write exclusion history
+      - name: Install processing dependencies
+        run: pip install Pillow 'opencv-python-headless>=4.10,<5'
+      - name: Select, process and publish one eligible reel
         env:
-          HISTORY: ${{ inputs.reserved_or_published_hashes }}
-        run: |
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          value = json.loads(os.environ['HISTORY'])
-          if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-              raise ValueError('History must be a JSON list of hashes')
-          Path('history.json').write_text(json.dumps(value))
-          PY
-      - name: Select, screen and render
-        env:
-          GH_TOKEN: ${{ github.token }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
-        run: python scripts/select_bundle_clip.py --backend-ledger
-      - name: Save processed clip and screening reports
+          GH_TOKEN: ${{ github.token }}
+          PYTHONUNBUFFERED: '1'
+          OMP_THREAD_LIMIT: '1'
+          REEL_FFMPEG_THREADS: '2'
+          REEL_RENDER_PRESET: veryfast
+        run: python scripts/run_bundle.py
+      - name: Save processing reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bundle-preparation
+          name: bundle-processing-reports
           path: |
-            bundle-output/*-rendered.mp4
             bundle-output/*-report.json
             bundle-output/selection.json
-          retention-days: 7
+          if-no-files-found: ignore
+          retention-days: 14
