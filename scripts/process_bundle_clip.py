@@ -43,15 +43,12 @@ def process(source, output, report, max_seconds=30):
             tsv = run(['tesseract', str(frame), 'stdout', '--psm', '11', 'tsv'])
             for row in csv.DictReader(io.StringIO(tsv), delimiter='\t'):
                 text = (row.get('text') or '').strip()
-                if float(row.get('conf', '-1')) < 35 or not text:
+                if float(row.get('conf', '-1')) < 65 or len(re.sub(r'[^a-zA-Z0-9]', '', text)) < 4:
                     continue
-                # OCR text at any edge is conservatively treated as branding;
-                # handles, URLs and explicit branding terms are flagged anywhere.
-                edge = (int(row['left']) < 160 or int(row['left']) + int(row['width']) > 920
-                        or int(row['top']) < frame_height * .15
-                        or int(row['top']) + int(row['height']) > frame_height * .85)
-                branded = re.search(r'@|www\.|\.com|instagram|tiktok|reelbundle|watermark|follow', text, re.I)
-                if edge or branded:
+                # Mask explicit branding matches only. Edge text alone produced
+                # false positives on artwork and obscured most of the frame.
+                branded = re.search(r'@[a-z0-9_.]{3,}|www\.|\.com|instagram|tiktok|youtube|reelbundle|watermark', text, re.I)
+                if branded:
                     findings.append({'sample': index, 'text': text,
                                      'box': [int(row[k]) for k in ('left', 'top', 'width', 'height')],
                                      'frame_height': frame_height})
