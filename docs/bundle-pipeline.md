@@ -55,3 +55,9 @@ stamp media IDs and publication times. Reservations never expire automatically.
 Deploy/migrate backend before consuming these APIs. The public worker must not
 receive admin credentials; a backend queue contract is still required to serve
 exclusion history and perform reservations on behalf of the worker.
+
+The preparation workflow now retrieves history and reserves selections using
+GitHub OIDC (audience instapilot-bundle-worker), restricted by the backend to
+the exact feature-branch workflow and manual dispatch events. No admin or cron
+secret is used for this new contract. BACKEND_URL uses the existing repository
+configuration. Deploy the backend before running this workflow.

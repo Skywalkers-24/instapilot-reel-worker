@@ -40,7 +40,7 @@ jobs:
       - name: Select, screen and render
         env:
           GH_TOKEN: ${{ github.token }}
-          BACKEND_URL: https://instapilot-india.onrender.com
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: python scripts/select_bundle_clip.py --backend-ledger
       - name: Save processed clip and screening reports
         if: always()
