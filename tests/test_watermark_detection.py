@@ -15,10 +15,14 @@ class DetectionTests(unittest.TestCase):
     def test_brand_is_small_and_has_transparent_rounded_corners(self):
         brand=create_brand_overlay()
         self.assertEqual(brand.mode,'RGBA')
-        self.assertEqual(brand.height,64)
+        self.assertEqual(brand.height,52)
         self.assertLess(brand.width,300)
         self.assertEqual(brand.getpixel((0,0))[3],0)
-        self.assertGreater(brand.getpixel((30,30))[3],200)
+        self.assertGreater(brand.getchannel('A').getextrema()[1],200)
+        for red,green,blue,alpha in brand.getdata():
+            if alpha:
+                self.assertEqual(red,green)
+                self.assertEqual(green,blue)
 
     def test_caption_and_platform_mentions_are_preserved(self):
         for text in ['My happiness forever','Follow your dreams','youtube','instagram','TVS']:

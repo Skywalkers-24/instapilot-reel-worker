@@ -83,11 +83,10 @@ were detected in 9/12 and 12/12 sampled frames, respectively.
 
 ## Trendyapa overlay
 
-The wordmark is rendered at 3x resolution with Pillow and downsampled for smooth
-edges. A rounded dark badge contains a warm gradient play icon, white `trendy`
-and peach `apa` lettering. The surrounding corners are transparent. It remains
-small in the bottom-right safe area and is composited after watermark blending.
-All assets are code generated; no image-generation service or extra secret is needed.
+The single-line white wordmark is drawn in one text operation on one baseline,
+rendered at 3x resolution and downsampled for smooth edges. A subtle neutral dark
+background improves readability. There is no icon or colored accent. The corners
+are transparent and the mark stays small in the bottom-right safe area.
 
 Run detector and branding regressions with
 `python -m unittest discover -s tests -v` after installing worker dependencies.
