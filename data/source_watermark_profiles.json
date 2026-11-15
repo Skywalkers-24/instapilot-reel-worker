@@ -53,6 +53,24 @@
         }
       ],
       "review_number": 18
+    },
+    "07483d53429949331293801de9149a784fc07a7a01d729adc2e0471cacd7dac9": {
+      "reference_size": [
+        1080,
+        1920
+      ],
+      "regions": [
+        {
+          "kind": "gemini_sparkle",
+          "box": [
+            858,
+            1698,
+            84,
+            84
+          ]
+        }
+      ],
+      "reason": "Reviewed fixed sparkle in the explicitly requested logo-update repost"
     }
   }
 }
