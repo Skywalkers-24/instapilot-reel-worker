@@ -32,20 +32,19 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/apt-cache
-          key: apt-ocr-${{ runner.os }}-ubuntu-24.04
+          key: apt-media-ocr-${{ runner.os }}-ubuntu-24.04
 
       - name: Install video and OCR tools
         run: |
           mkdir -p ~/apt-cache
           if [ "${{ steps.cache-apt.outputs.cache-hit }}" = "true" ] && ls ~/apt-cache/*.deb >/dev/null 2>&1; then
-            echo "Installing OCR packages from cache..."
-            sudo dpkg -i -E ~/apt-cache/*.deb 2>/dev/null || (sudo apt-get update && sudo apt-get install -y tesseract-ocr fonts-dejavu-core)
+            echo "Installing cached packages..."
+            sudo dpkg -i -E ~/apt-cache/*.deb 2>/dev/null || (sudo apt-get update && sudo apt-get install -y ffmpeg tesseract-ocr fonts-dejavu-core)
           else
-            echo "Downloading and installing OCR packages..."
+            echo "Downloading and installing packages..."
             sudo apt-get update
-            sudo apt-get install --download-only -y tesseract-ocr fonts-dejavu-core
+            sudo apt-get install -y ffmpeg tesseract-ocr fonts-dejavu-core
             cp -n /var/cache/apt/archives/*.deb ~/apt-cache/ 2>/dev/null || true
-            sudo dpkg -i -E ~/apt-cache/*.deb 2>/dev/null || sudo apt-get install -y tesseract-ocr fonts-dejavu-core
           fi
 
       - name: Cache bundle source archives
