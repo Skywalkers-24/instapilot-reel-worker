@@ -25,3 +25,23 @@ https://buffer.com/resources/when-is-the-best-time-to-post-on-instagram/
 
 Rollback: disable entertainment mode, restore job mode, and retain all published
 source hashes permanently. No production schedule has been changed by this branch.
+
+## Automated processing
+
+`Prepare Bundle Reel` is a manual Actions workflow on this branch. It accepts
+an exclusion hash list, downloads sources using the ephemeral GitHub token,
+verifies archive SHA256, screens twelve frames spanning each source using
+Tesseract OCR, skips likely source marks, and continues until a clip renders.
+OCR is heuristic: logos, moving marks and stylized text can be missed, and
+ordinary edge text can cause false positives. This does not verify ownership.
+
+`process_bundle_clip.py` preserves the entire source image, pads to 1080x1920,
+limits duration to 30 seconds, applies modest contrast/sharpening, adds a small
+bottom-right trendyapa mark, preserves available audio, and encodes H.264/AAC.
+It checks output dimensions and duration before saving. Source marks are never
+removed or covered deliberately. The workflow saves video and reports as
+seven-day Actions artifacts. It does not publish to Instagram.
+
+The workflow's exclusion list is an input, not a permanent publish ledger.
+Scheduled publishing must not be enabled until the backend queue and atomic
+reservation/publish recovery described above are implemented.

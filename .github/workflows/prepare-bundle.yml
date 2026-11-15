@@ -1,0 +1,50 @@
+name: Prepare Bundle Reel
+on:
+  workflow_dispatch:
+    inputs:
+      reserved_or_published_hashes:
+        description: 'JSON list of all reserved or published source SHA256 hashes'
+        required: true
+        default: '[]'
+permissions:
+  contents: read
+concurrency:
+  group: bundle-prepare
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install video and OCR tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg tesseract-ocr fonts-dejavu-core
+      - name: Write exclusion history
+        env:
+          HISTORY: ${{ inputs.reserved_or_published_hashes }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          value = json.loads(os.environ['HISTORY'])
+          if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+              raise ValueError('History must be a JSON list of hashes')
+          Path('history.json').write_text(json.dumps(value))
+          PY
+      - name: Select, screen and render
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/select_bundle_clip.py --history history.json
+      - name: Save processed clip and screening reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-preparation
+          path: |
+            bundle-output/*-rendered.mp4
+            bundle-output/*-report.json
+            bundle-output/selection.json
+          retention-days: 7
