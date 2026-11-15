@@ -56,4 +56,14 @@ the new worker contract uses OIDC.
 Deploy backend branch, verify routes, then enable content_mode=bundle via the
 admin settings API. Confirm existing external triggers reach the backend.
 Activation is reversible via content_mode=jobs. No production setting was changed
-while finalizing this code, and no additional live reel was posted.
+while finalizing this code, and no scheduled reel was posted by finalization tests.
+
+## Explicit logo-update repost
+
+The user subsequently requested one repost of the earlier miniature reel with
+the updated wordmark. It was published as Instagram media 18655260460031132:
+https://www.instagram.com/reel/DfxaWHRu1fI/ . Original media 17981142956921915
+and its source ledger record were preserved. The explicit exception is audited
+under manual_repost_17981142956921915_logo_v2; do not repeat it automatically.
+Five duplicate ZIP copies were deleted from the workspace root at the user's
+request. The five worker bundles and all local review files remain intact.
