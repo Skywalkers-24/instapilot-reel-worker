@@ -7,17 +7,21 @@ import subprocess
 import tempfile
 import zipfile
 from process_bundle_clip import process
+from bundle_backend import call
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--history', type=Path, required=True,
+    parser.add_argument('--backend-ledger', action='store_true')
+    parser.add_argument('--history', type=Path,
                         help='JSON list of source SHA256 hashes already reserved or published')
     parser.add_argument('--output', type=Path, default=ROOT / 'bundle-output')
     args = parser.parse_args()
-    history = set(json.loads(args.history.read_text()))
+    if not args.backend_ledger and not args.history:
+        parser.error('--backend-ledger or --history is required')
+    history = set(call('history')['hashes'] if args.backend_ledger else json.loads(args.history.read_text()))
     manifest = json.loads((ROOT / 'data/bundle_manifest.json').read_text())
     sources = ROOT / 'bundles'
     sources.mkdir(exist_ok=True)
@@ -65,10 +69,12 @@ def main():
                     if not process(destination, rendered, report):
                         destination.unlink()
                         continue
+                    reservation = call('reserve', {'source_sha256': source_hash,
+                        'archive': archive['asset'], 'member': entry.filename}) if args.backend_ledger else {}
                     (args.output / 'selection.json').write_text(json.dumps({
                         'source_sha256': source_hash, 'archive': archive['asset'],
                         'member': entry.filename, 'duration': duration,
-                        'video': str(rendered), 'status': 'rendered'}, indent=2))
+                        'video': str(rendered), 'status': 'rendered', **reservation}, indent=2))
                     print(destination)
                     return
     raise SystemExit('No eligible unused clip remains')

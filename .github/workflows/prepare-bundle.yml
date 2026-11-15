@@ -8,6 +8,7 @@ on:
         default: '[]'
 permissions:
   contents: read
+  id-token: write
 concurrency:
   group: bundle-prepare
   cancel-in-progress: false
@@ -39,7 +40,8 @@ jobs:
       - name: Select, screen and render
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python scripts/select_bundle_clip.py --history history.json
+          BACKEND_URL: https://instapilot-india.onrender.com
+        run: python scripts/select_bundle_clip.py --backend-ledger
       - name: Save processed clip and screening reports
         if: always()
         uses: actions/upload-artifact@v4
