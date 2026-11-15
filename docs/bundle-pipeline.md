@@ -16,7 +16,7 @@ Remaining implementation before enabling automation:
    history and recovery of ambiguous Instagram responses without reposting.
 2. Backend entertainment mode that pauses job posting and enforces three daily
    IST slots (initial experiment: 18:00, 20:00, 22:00), retaining the cadence gate.
-3. FFmpeg enhancement and small bottom-right trendyapa overlay, with output probe.
+3. Verify deployment and schedule integration for the existing video renderer.
 4. Worker contract, workflow and backend deployment; integration verification.
 
 Timing basis: Buffer's 2026 analysis of 9.6 million Instagram posts recommends
@@ -38,10 +38,10 @@ ordinary edge text can cause false positives. This does not verify ownership.
 `process_bundle_clip.py` preserves the entire source image, pads to 1080x1920,
 limits duration to 30 seconds, applies modest contrast/sharpening, adds a small
 bottom-right trendyapa mark, preserves available audio, and encodes H.264/AAC.
-It checks output dimensions and duration before saving. Detected regions receive opaque masks; OCR can miss marks or mask ordinary text. The workflow saves video and reports as
+It checks output dimensions and duration before saving. Repeated small edge regions receive a local blend; captions are preserved. The workflow saves video and reports as
 seven-day Actions artifacts. It does not publish to Instagram.
 
-The workflow's exclusion list is an input, not a permanent publish ledger.
+The workflow uses backend exclusion history and atomically reserves its selected source. The manual history argument remains available for local preparation.
 Scheduled publishing must not be enabled until the backend queue and atomic
 reservation/publish recovery described above are implemented.
 
@@ -53,11 +53,41 @@ member and reel_id. Duplicate reservations return 409. GET /api/bundle-sources
 returns reserved and published identities. Confirmed worker publish callbacks
 stamp media IDs and publication times. Reservations never expire automatically.
 Deploy/migrate backend before consuming these APIs. The public worker must not
-receive admin credentials; a backend queue contract is still required to serve
-exclusion history and perform reservations on behalf of the worker.
+receive admin credentials; the narrow worker contract serves
+exclusion history and performs reservations without exposing admin credentials.
 
 The preparation workflow now retrieves history and reserves selections using
 GitHub OIDC (audience instapilot-bundle-worker), restricted by the backend to
 the exact feature-branch workflow and manual dispatch events. No admin or cron
 secret is used for this new contract. BACKEND_URL uses the existing repository
 configuration. Deploy the backend before running this workflow.
+
+## Bounded watermark detection
+
+Text masking requires high-confidence explicit handles or domains at an edge;
+ordinary words, platform mentions and central captions are preserved. A compact
+four-point sparkle detector scans the bottom-right source corner separately
+from OCR. Detections must repeat at the same location in at least three distinct
+samples. Regions larger than 2% of the image or combined coverage above 4% are
+rejected. FFmpeg delogo blends only those small rectangles instead of drawing
+opaque black boxes; frames are fitted with padding, never cropped by default.
+
+This is heuristic, not exhaustive logo recognition. Moving, low-contrast or
+large central marks can remain; blends may soften textured backgrounds. Reports
+record raw findings and the final regions actually modified. The source hash
+continues to identify the original clip independently of rendered variants.
+
+Validation: 10 videos sampled at three timestamps across all five archives,
+six detector regressions, and rendered checks from every bundle. Gemini samples
+were detected in 9/12 and 12/12 sampled frames, respectively.
+
+## Trendyapa overlay
+
+The wordmark is rendered at 3x resolution with Pillow and downsampled for smooth
+edges. A rounded dark badge contains a warm gradient play icon, white `trendy`
+and peach `apa` lettering. The surrounding corners are transparent. It remains
+small in the bottom-right safe area and is composited after watermark blending.
+All assets are code generated; no image-generation service or extra secret is needed.
+
+Run detector and branding regressions with
+`python -m unittest discover -s tests -v` after installing worker dependencies.

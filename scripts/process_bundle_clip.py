@@ -4,11 +4,12 @@ import csv
 import io
 import json
 from pathlib import Path
-import re
 import shutil
 import subprocess
 import tempfile
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
+from brand_overlay import create_brand_overlay
+from watermark_detection import text_candidate, sparkle_candidates, stable_regions
 
 
 def run(args):
@@ -42,42 +43,26 @@ def process(source, output, report, max_seconds=30):
             frame_height = frame_info['height']
             tsv = run(['tesseract', str(frame), 'stdout', '--psm', '11', 'tsv'])
             for row in csv.DictReader(io.StringIO(tsv), delimiter='\t'):
-                text = (row.get('text') or '').strip()
-                if float(row.get('conf', '-1')) < 65 or len(re.sub(r'[^a-zA-Z0-9]', '', text)) < 4:
-                    continue
-                # Mask explicit branding matches only. Edge text alone produced
-                # false positives on artwork and obscured most of the frame.
-                branded = re.search(r'@[a-z0-9_.]{3,}|www\.|\.com|instagram|tiktok|youtube|reelbundle|watermark', text, re.I)
-                if branded:
-                    findings.append({'sample': index, 'text': text,
-                                     'box': [int(row[k]) for k in ('left', 'top', 'width', 'height')],
-                                     'frame_height': frame_height})
-        result = {'source': str(source), 'ocr_samples': 12, 'findings': findings,
+                finding = text_candidate(row, 1080, frame_height)
+                if finding:
+                    findings.append({**finding, 'sample':index})
+            with Image.open(frame) as image:
+                findings.extend({**f, 'sample':index} for f in sparkle_candidates(image))
+        regions = stable_regions(findings, 1080, frame_height)
+        result = {'source': str(source), 'ocr_samples': 12, 'findings': findings, 'regions':regions,
                   'status': 'rendering',
                   'limitation': 'OCR screening can miss logos, stylized text and moving marks.'}
         report.parent.mkdir(parents=True, exist_ok=True)
         report.write_text(json.dumps(result, indent=2))
         output.parent.mkdir(parents=True, exist_ok=True)
-        # Mask sampled regions throughout the clip, including moving marks.
-        # Coordinates are normalized before fitting the frame to portrait output.
-        masks = set()
-        for finding in findings:
-            left, top, width, height = finding['box']
-            masks.add((max(0, left - 12), max(0, top - 12),
-                       min(1080, left + width + 12),
-                       min(finding['frame_height'], top + height + 12)))
+        # Blend only bounded, repeated edge regions; never union all OCR words.
         mask_filters = 'scale=1080:-2,' + ''.join(
-            f'drawbox=x={x}:y={y}:w={right-x}:h={bottom-y}:color=black:t=fill,'
-            for x, y, right, bottom in sorted(masks))
+            f"delogo=x={r['box'][0]}:y={r['box'][1]}:w={r['box'][2]}:h={r['box'][3]},"
+            for r in regions)
         filters = mask_filters + ('scale=1080:1920:force_original_aspect_ratio=decrease,'
                    'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,'
                    'eq=contrast=1.03:saturation=1.04,unsharp=5:5:0.3:5:5:0')
-        branding = Image.new('RGBA', (170, 48), (0, 0, 0, 90))
-        draw = ImageDraw.Draw(branding)
-        fonts = ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-                 '/System/Library/Fonts/Supplemental/Arial.ttf']
-        font = next((ImageFont.truetype(f, 28) for f in fonts if Path(f).exists()), ImageFont.load_default())
-        draw.text((7, 6), 'trendyapa', font=font, fill=(255, 255, 255, 210))
+        branding = create_brand_overlay()
         brand_path = temp / 'brand.png'
         branding.save(brand_path)
         rendered = temp / 'render.mp4'
