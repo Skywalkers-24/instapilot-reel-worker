@@ -30,7 +30,7 @@ source hashes permanently. No production schedule has been changed by this branc
 
 `Prepare Bundle Reel` is a manual Actions workflow on this branch. It accepts
 an exclusion hash list, downloads sources using the ephemeral GitHub token,
-verifies archive SHA256, screens twelve frames spanning each source using
+verifies archive SHA256, screens up to sixty frames from the rendered portion using
 Tesseract OCR and masks detected regions before rendering.
 OCR is heuristic: logos, moving marks and stylized text can be missed, and
 ordinary edge text can cause false positives. This does not verify ownership.
@@ -64,15 +64,15 @@ configuration. Deploy the backend before running this workflow.
 
 ## Bounded watermark detection
 
-Text masking requires high-confidence explicit handles or domains at an edge;
-ordinary words, platform mentions and central captions are preserved. A compact
+Text masking requires high-confidence explicit handles or domains;
+ordinary words, platform mentions and normal captions are preserved. Explicit small handles can be detected centrally too. A compact
 four-point sparkle detector scans the bottom-right source corner separately
-from OCR. Detections must repeat at the same location in at least three distinct
-samples. Regions larger than 2% of the image or combined coverage above 4% are
+from OCR. Graphic detections must repeat at the same location in at least three distinct
+samples. Text tracks require the same identity across at least three samples. Regions larger than 2% of the image or combined coverage above 4% are
 rejected. FFmpeg delogo blends only those small rectangles instead of drawing
 opaque black boxes; frames are fitted with padding, never cropped by default.
 
-This is heuristic, not exhaustive logo recognition. Moving, low-contrast or
+This is heuristic, not exhaustive logo recognition. Unrecognized graphics, low-contrast text and
 large central marks can remain; blends may soften textured backgrounds. Reports
 record raw findings and the final regions actually modified. The source hash
 continues to identify the original clip independently of rendered variants.
@@ -90,3 +90,15 @@ are transparent and the mark stays small in the bottom-right safe area.
 
 Run detector and branding regressions with
 `python -m unittest discover -s tests -v` after installing worker dependencies.
+
+## Moving text and additional graphics
+
+The rendered portion is sampled at up to two frames per second, capped at 60
+frames. Repeated creator text is grouped by identity, with small FFmpeg timeline
+regions active only around each detection. It is never merged into a large
+permanent rectangle along its path. Total simultaneous modified area remains
+bounded at 4%. Fast jumps between samples may leave residual watermark pixels.
+A compact YouTube badge detector requires both a red badge and white triangular
+play glyph; arbitrary red rectangles are rejected. Unknown logo shapes are not
+automatically erased. A synthetic eight-second moving-handle render verified
+that timed blends leave the main caption readable. Ten unit tests passed.

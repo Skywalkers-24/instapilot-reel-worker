@@ -1,6 +1,7 @@
 """OCR watermark masking and branded reel rendering."""
 import argparse
 import csv
+import math
 import io
 import json
 from pathlib import Path
@@ -9,7 +10,7 @@ import subprocess
 import tempfile
 from PIL import Image
 from brand_overlay import create_brand_overlay
-from watermark_detection import text_candidate, sparkle_candidates, stable_regions
+from watermark_detection import text_candidate, sparkle_candidates, stable_regions, youtube_candidates, timed_text_regions
 
 
 def run(args):
@@ -33,31 +34,43 @@ def process(source, output, report, max_seconds=30):
     findings = []
     with tempfile.TemporaryDirectory() as directory:
         temp = Path(directory)
-        # Sample the entire source so later watermarks are not ignored by a trim.
-        full_duration = float(info['format']['duration'])
-        for index in range(12):
+        # Sample the portion that will actually be rendered at up to two frames/second.
+        sample_count=max(12,min(60,math.ceil(duration*2)))
+        step=duration/sample_count
+        for index in range(sample_count):
+            timestamp=step*(index+.5)
             frame = temp / f'{index}.png'
-            run(['ffmpeg', '-v', 'error', '-ss', str(full_duration * (index + .5) / 12),
+            run(['ffmpeg', '-v', 'error', '-ss', str(timestamp),
                  '-i', str(source), '-frames:v', '1', '-vf', 'scale=1080:-2', str(frame)])
-            frame_info = probe(frame)['streams'][0]
-            frame_height = frame_info['height']
+            if not frame.exists():
+                continue
+            with Image.open(frame) as image:
+                frame_height = image.height
             tsv = run(['tesseract', str(frame), 'stdout', '--psm', '11', 'tsv'])
             for row in csv.DictReader(io.StringIO(tsv), delimiter='\t'):
                 finding = text_candidate(row, 1080, frame_height)
                 if finding:
-                    findings.append({**finding, 'sample':index})
+                    findings.append({**finding, 'sample':index, 'time':timestamp})
             with Image.open(frame) as image:
-                findings.extend({**f, 'sample':index} for f in sparkle_candidates(image))
-        regions = stable_regions(findings, 1080, frame_height)
-        result = {'source': str(source), 'ocr_samples': 12, 'findings': findings, 'regions':regions,
-                  'status': 'rendering',
-                  'limitation': 'OCR screening can miss logos, stylized text and moving marks.'}
+                findings.extend({**f, 'sample':index, 'time':timestamp} for f in sparkle_candidates(image)+youtube_candidates(image))
+        regions = stable_regions([f for f in findings if f['kind']!='creator_text'],1080,frame_height)
+        regions += timed_text_regions(findings,1080,frame_height,step,duration)
+        budget_exceeded = any(
+            sum(r['box'][2]*r['box'][3] for r in regions
+                if 'start' not in r or r['start'] <= step*(i+.5) < r['end'])
+            > 1080*frame_height*.04 for i in range(sample_count))
+        if budget_exceeded:
+            regions = []
+        result = {'source': str(source), 'ocr_samples': sample_count, 'findings': findings, 'regions':regions,
+                  'status': 'rendering', 'mask_budget_exceeded':budget_exceeded,
+                  'limitation': 'Unknown graphics and low-confidence text can remain. Fast motion between samples can leave residual marks.'}
         report.parent.mkdir(parents=True, exist_ok=True)
         report.write_text(json.dumps(result, indent=2))
         output.parent.mkdir(parents=True, exist_ok=True)
         # Blend only bounded, repeated edge regions; never union all OCR words.
         mask_filters = 'scale=1080:-2,' + ''.join(
-            f"delogo=x={r['box'][0]}:y={r['box'][1]}:w={r['box'][2]}:h={r['box'][3]},"
+            f"delogo=x={r['box'][0]}:y={r['box'][1]}:w={r['box'][2]}:h={r['box'][3]}"
+            + (f":enable='between(t,{r['start']:.4f},{r['end']:.4f})'" if 'start' in r else '') + ','
             for r in regions)
         filters = mask_filters + ('scale=1080:1920:force_original_aspect_ratio=decrease,'
                    'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,'
