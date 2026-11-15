@@ -9,7 +9,7 @@ Selection: run `python scripts/select_bundle_clip.py --history history.json`.
 The history must be a JSON list of reserved/published source SHA256 hashes.
 The selector downloads missing archives, verifies checksums, skips identical
 files already in history, and selects a decodable video longer than five seconds.
-It preserves source attribution. Selection is not a publish or reservation.
+It records detected source marks. Selection is not a publish or reservation.
 
 Remaining implementation before enabling automation:
 1. Backend queue with unique source hashes, atomic reservations, durable publish
@@ -31,17 +31,27 @@ source hashes permanently. No production schedule has been changed by this branc
 `Prepare Bundle Reel` is a manual Actions workflow on this branch. It accepts
 an exclusion hash list, downloads sources using the ephemeral GitHub token,
 verifies archive SHA256, screens twelve frames spanning each source using
-Tesseract OCR, skips likely source marks, and continues until a clip renders.
+Tesseract OCR and masks detected regions before rendering.
 OCR is heuristic: logos, moving marks and stylized text can be missed, and
 ordinary edge text can cause false positives. This does not verify ownership.
 
 `process_bundle_clip.py` preserves the entire source image, pads to 1080x1920,
 limits duration to 30 seconds, applies modest contrast/sharpening, adds a small
 bottom-right trendyapa mark, preserves available audio, and encodes H.264/AAC.
-It checks output dimensions and duration before saving. Source marks are never
-removed or covered deliberately. The workflow saves video and reports as
+It checks output dimensions and duration before saving. Detected regions receive opaque masks; OCR can miss marks or mask ordinary text. The workflow saves video and reports as
 seven-day Actions artifacts. It does not publish to Instagram.
 
 The workflow's exclusion list is an input, not a permanent publish ledger.
 Scheduled publishing must not be enabled until the backend queue and atomic
 reservation/publish recovery described above are implemented.
+
+## Permanent ledger backend
+
+Backend migration `0023_bundle_sources` adds a permanent SHA256-keyed ledger.
+Admin API `POST /api/bundle-sources/reserve` accepts source_sha256, archive,
+member and reel_id. Duplicate reservations return 409. GET /api/bundle-sources
+returns reserved and published identities. Confirmed worker publish callbacks
+stamp media IDs and publication times. Reservations never expire automatically.
+Deploy/migrate backend before consuming these APIs. The public worker must not
+receive admin credentials; a backend queue contract is still required to serve
+exclusion history and perform reservations on behalf of the worker.

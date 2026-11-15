@@ -1,4 +1,4 @@
-"""Conservative OCR screening and attribution-preserving reel rendering."""
+"""OCR watermark masking and branded reel rendering."""
 import argparse
 import csv
 import io
@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from PIL import Image, ImageDraw, ImageFont
 
 
 def run(args):
@@ -52,24 +53,40 @@ def process(source, output, report, max_seconds=30):
                 branded = re.search(r'@|www\.|\.com|instagram|tiktok|reelbundle|watermark|follow', text, re.I)
                 if edge or branded:
                     findings.append({'sample': index, 'text': text,
-                                     'box': [int(row[k]) for k in ('left', 'top', 'width', 'height')]})
+                                     'box': [int(row[k]) for k in ('left', 'top', 'width', 'height')],
+                                     'frame_height': frame_height})
         result = {'source': str(source), 'ocr_samples': 12, 'findings': findings,
-                  'status': 'skipped_source_mark' if findings else 'rendering',
+                  'status': 'rendering',
                   'limitation': 'OCR screening can miss logos, stylized text and moving marks.'}
         report.parent.mkdir(parents=True, exist_ok=True)
         report.write_text(json.dumps(result, indent=2))
-        if findings:
-            return False
         output.parent.mkdir(parents=True, exist_ok=True)
-        # Fit the full frame: no source attribution is cropped away.
-        filters = ('scale=1080:1920:force_original_aspect_ratio=decrease,'
+        # Mask sampled regions throughout the clip, including moving marks.
+        # Coordinates are normalized before fitting the frame to portrait output.
+        masks = set()
+        for finding in findings:
+            left, top, width, height = finding['box']
+            masks.add((max(0, left - 12), max(0, top - 12),
+                       min(1080, left + width + 12),
+                       min(finding['frame_height'], top + height + 12)))
+        mask_filters = 'scale=1080:-2,' + ''.join(
+            f'drawbox=x={x}:y={y}:w={right-x}:h={bottom-y}:color=black:t=fill,'
+            for x, y, right, bottom in sorted(masks))
+        filters = mask_filters + ('scale=1080:1920:force_original_aspect_ratio=decrease,'
                    'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,'
-                   'eq=contrast=1.03:saturation=1.04,unsharp=5:5:0.3:5:5:0,'
-                   'drawtext=text=trendyapa:fontsize=28:fontcolor=white@0.8:'
-                   'box=1:boxcolor=black@0.3:boxborderw=6:x=w-tw-32:y=h-th-100')
+                   'eq=contrast=1.03:saturation=1.04,unsharp=5:5:0.3:5:5:0')
+        branding = Image.new('RGBA', (170, 48), (0, 0, 0, 90))
+        draw = ImageDraw.Draw(branding)
+        fonts = ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+                 '/System/Library/Fonts/Supplemental/Arial.ttf']
+        font = next((ImageFont.truetype(f, 28) for f in fonts if Path(f).exists()), ImageFont.load_default())
+        draw.text((7, 6), 'trendyapa', font=font, fill=(255, 255, 255, 210))
+        brand_path = temp / 'brand.png'
+        branding.save(brand_path)
         rendered = temp / 'render.mp4'
-        run(['ffmpeg', '-v', 'error', '-i', str(source), '-t', str(duration),
-             '-map', '0:v:0', '-map', '0:a:0?', '-vf', filters, '-r', '30',
+        run(['ffmpeg', '-v', 'error', '-i', str(source), '-i', str(brand_path), '-t', str(duration), '-filter_complex',
+             f'[0:v]{filters}[base];[base][1:v]overlay=W-w-32:H-h-100[v]',
+             '-map', '[v]', '-map', '0:a:0?', '-r', '30',
              '-c:v', 'libx264', '-crf', '20', '-preset', 'medium', '-pix_fmt', 'yuv420p',
              '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', str(rendered)])
         final = probe(rendered)
