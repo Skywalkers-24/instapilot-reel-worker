@@ -1,0 +1,35 @@
+{
+  "release_tag": "bundle-sources-v1",
+  "archives": [
+    {
+      "asset": "600+ AI Gibili Style Reel Bundle -20261115T163222Z-1-001.zip",
+      "sha256": "5e838a1b1d24eda21ac277f36578b7c6eee16aaa790dec1001532a2f56253acb",
+      "bytes": 1110810073,
+      "video_count": 173
+    },
+    {
+      "asset": "By @reelbundlez 1000+ AI skeleton reelbundle-20261115T162701Z-1-001.zip",
+      "sha256": "dea2f4beb5282c4b565cdaee3577bc08ce7eeb63b96c8eb416e9144c88257ce0",
+      "bytes": 692008522,
+      "video_count": 1021
+    },
+    {
+      "asset": "Mini car unboxing reels-20261115T161446Z-1-001.zip",
+      "sha256": "ba6f7eb770797f07d97c82557ef46926f0a48ee649483e1a28f3f2df20fd8ee4",
+      "bytes": 337570262,
+      "video_count": 202
+    },
+    {
+      "asset": "Pookie voice reels-20261115T161653Z-1-001.zip",
+      "sha256": "d4b879a16ba58da1845bff90668f41220b78648e8cc8ecb3308de6a2da76eb04",
+      "bytes": 1114860455,
+      "video_count": 257
+    },
+    {
+      "asset": "Premium -20261115T161638Z-1-001.zip",
+      "sha256": "4a3efb1e5f5e805e06f7c2eba724f3641b78d6114b7ae27f2ce449818d7bd33a",
+      "bytes": 350912360,
+      "video_count": 84
+    }
+  ]
+}

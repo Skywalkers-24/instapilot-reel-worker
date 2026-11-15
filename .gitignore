@@ -4,6 +4,8 @@ __pycache__/
 /temp/
 /tmp/
 /scratch/
+/bundles/
+/bundle-output/
 out.mp4
 reel-*.mp4
 content.jpg
