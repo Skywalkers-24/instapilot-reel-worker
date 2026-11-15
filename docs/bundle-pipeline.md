@@ -6,7 +6,7 @@ unused source only when eligible. Bulk preparation was cancelled by the user.
 ## Runtime
 
 1. Existing Cloudflare/cron wakeups call backend `/api/cron/trigger-publish`.
-2. In `content_mode=bundle`, the backend dispatches `prepare-bundle.yml` on
+2. In `content_mode=bundle`, the backend dispatches `publish-reel.yml` on
    `feature/trendyapa-bundle-reels`. In jobs mode, existing dispatch is preserved.
 3. Actions obtains short-lived GitHub OIDC identity and calls
    `/api/bundle-worker/publish/next`. Backend enforces 18:00, 20:00 and 22:00 IST

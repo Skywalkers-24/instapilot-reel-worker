@@ -19,7 +19,7 @@ Worker checks (use a Python environment with requirements installed):
 
 On-demand entry point:
 `scripts/run_bundle.py` (requires an Actions OIDC environment; not a local login).
-Backend auth is pinned to the exact prepare-bundle.yml feature-branch workflow.
+Backend auth is pinned to the exact publish-reel.yml feature-branch workflow.
 
 Local audit/review:
 `scripts/inventory_bundles.py` and `scripts/prepare_bundle_review.py`.

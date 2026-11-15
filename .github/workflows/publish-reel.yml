@@ -1,128 +1,41 @@
-name: Publish Reel
-
+name: Process and Publish Bundle Reel
 on:
-  schedule:
-    - cron: '*/30 * * * *'
-  repository_dispatch:
-    types: [publish-reel]     # fired by the backend after Cloudflare cron calls it
-  workflow_dispatch:          # manual "Run workflow" button
-    inputs:
-      force_publish:
-        description: "Bypass backend cadence gate for manual testing"
-        required: false
-        default: false
-        type: boolean
-
+  workflow_dispatch:
+permissions:
+  contents: write
+  id-token: write
 concurrency:
   group: publish-reel
   cancel-in-progress: false
-
-permissions:
-  contents: write            # needed to create/upload/prune Release assets
-
 jobs:
   publish:
     runs-on: ubuntu-latest
-    env:
-      PYTHONUNBUFFERED: '1'
+    timeout-minutes: 60
     steps:
-      - name: Checkout worker
-        uses: actions/checkout@v4
-
-      - name: Setup Python 3.12
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: requirements.txt
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      # Cache a single static ffmpeg binary instead of apt-installing ~99
-      # packages every run (that was ~1m40s). First run downloads ~30MB once;
-      # every run after restores from cache in a couple of seconds.
-      - name: Cache ffmpeg static binary
-        id: cache-ffmpeg
-        uses: actions/cache@v4
+      - name: Install video and OCR tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg tesseract-ocr fonts-dejavu-core
+      - name: Install processing dependencies
+        run: pip install Pillow 'opencv-python-headless>=4.10,<5'
+      - name: Select, process and publish one eligible reel
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          GH_TOKEN: ${{ github.token }}
+          PYTHONUNBUFFERED: '1'
+          OMP_THREAD_LIMIT: '1'
+          REEL_FFMPEG_THREADS: '2'
+          REEL_RENDER_PRESET: veryfast
+        run: python scripts/run_bundle.py
+      - name: Save processing reports
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          path: ~/ffmpeg-static
-          key: ffmpeg-static-amd64-v1
-
-      - name: Download ffmpeg static binary (cache miss only)
-        if: steps.cache-ffmpeg.outputs.cache-hit != 'true'
-        run: |
-          set -euo pipefail
-          mkdir -p ~/ffmpeg-static
-          curl -fsSL -o /tmp/ffmpeg.tar.xz \
-            https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
-          tar -xJf /tmp/ffmpeg.tar.xz --strip-components=1 -C ~/ffmpeg-static
-          ~/ffmpeg-static/ffmpeg -version | head -1
-
-      - name: Put ffmpeg on PATH
-        run: echo "$HOME/ffmpeg-static" >> "$GITHUB_PATH"
-
-      - name: Prepare next reel
-        env:
-          BACKEND_URL: ${{ secrets.BACKEND_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: reel-media
-          KEEP_ASSETS: '5'
-          REEL_SECONDS: '8'
-          OUTRO_SECONDS: '0'
-          FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
-        run: python scripts/publish_reel.py --stage prepare
-
-      - name: Select backend-approved audio
-        env:
-          BACKEND_URL: ${{ secrets.BACKEND_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: reel-media
-          KEEP_ASSETS: '5'
-          REEL_SECONDS: '8'
-          OUTRO_SECONDS: '0'
-          FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
-        run: python scripts/publish_reel.py --stage scrape-audio
-
-      - name: Render reel video
-        env:
-          BACKEND_URL: ${{ secrets.BACKEND_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: reel-media
-          KEEP_ASSETS: '5'
-          REEL_SECONDS: '8'
-          OUTRO_SECONDS: '0'
-          FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
-        run: python scripts/publish_reel.py --stage render
-
-      - name: Upload media assets
-        env:
-          BACKEND_URL: ${{ secrets.BACKEND_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: reel-media
-          KEEP_ASSETS: '5'
-          REEL_SECONDS: '8'
-          OUTRO_SECONDS: '0'
-          FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
-        run: python scripts/publish_reel.py --stage upload
-
-      - name: Publish and mark complete
-        env:
-          BACKEND_URL: ${{ secrets.BACKEND_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: reel-media
-          KEEP_ASSETS: '5'
-          REEL_SECONDS: '8'
-          OUTRO_SECONDS: '0'
-          FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
-          POLL_FIRST_DELAY: '30'
-          POLL_INTERVAL: '15'
-          POLL_MAX: '8'
-        run: python scripts/publish_reel.py --stage publish
+          name: bundle-processing-reports
+          path: |
+            bundle-output/*-report.json
+            bundle-output/selection.json
+          if-no-files-found: ignore
+          retention-days: 14

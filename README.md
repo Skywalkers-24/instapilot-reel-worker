@@ -5,7 +5,7 @@ credentials and permanent posting history.
 
 ## Bundle mode
 
-`prepare-bundle.yml` runs `scripts/run_bundle.py` on demand. The backend checks
+`publish-reel.yml` runs `scripts/run_bundle.py` on demand. The backend checks
 an IST posting slot before the worker downloads a ZIP, selects an unused source,
 processes one reel and uploads the output. Backend-owned Instagram calls then
 publish it and commit the source identity. No bulk preparation is required.
