@@ -1,0 +1,58 @@
+{
+  "sources": {
+    "b6c5083b7408a99370fdeb6b416b0dedc13e6c73e926d12e67c147e9c8becdcc": {
+      "reference_size": [
+        1080,
+        1920
+      ],
+      "regions": [
+        {
+          "kind": "reviewed_fixed_logo",
+          "box": [
+            62,
+            1791,
+            448,
+            89
+          ]
+        }
+      ],
+      "review_number": 3
+    },
+    "aad8d3d9eab0f6b4f8e30a3a25dd346a7e0c7abb13eaa2e5ccce063088665ff1": {
+      "reference_size": [
+        1080,
+        1920
+      ],
+      "regions": [
+        {
+          "kind": "reviewed_fixed_logo",
+          "box": [
+            43,
+            1747,
+            408,
+            81
+          ]
+        }
+      ],
+      "review_number": 4
+    },
+    "9f6357ad4bd3a1de321b975ca47e8f3a6dc45d36d8ab058720d7e6c0a5f91733": {
+      "reference_size": [
+        1080,
+        1920
+      ],
+      "regions": [
+        {
+          "kind": "reviewed_fixed_logo",
+          "box": [
+            20,
+            18,
+            121,
+            127
+          ]
+        }
+      ],
+      "review_number": 18
+    }
+  }
+}

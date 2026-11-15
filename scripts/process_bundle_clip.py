@@ -10,7 +10,8 @@ import subprocess
 import tempfile
 from PIL import Image
 from brand_overlay import create_brand_overlay
-from watermark_detection import text_candidate, sparkle_candidates, stable_regions, youtube_candidates, timed_text_regions
+from source_exclusions import exclusions, source_digest, fixed_regions
+from watermark_detection import text_candidate, sparkle_candidates, stable_regions, youtube_candidates, timed_text_regions, exclusion_reason
 
 
 def run(args):
@@ -23,6 +24,12 @@ def probe(path):
 
 
 def process(source, output, report, max_seconds=30):
+    digest=source_digest(source)
+    blocked=exclusions().get(digest)
+    if blocked:
+        report.parent.mkdir(parents=True,exist_ok=True)
+        report.write_text(json.dumps({'status':'excluded','reason':blocked['reason'],'source_sha256':digest},indent=2))
+        return False
     for tool in ('ffmpeg', 'ffprobe', 'tesseract'):
         if not shutil.which(tool):
             raise RuntimeError(f'Required tool missing: {tool}')
@@ -53,8 +60,16 @@ def process(source, output, report, max_seconds=30):
                     findings.append({**finding, 'sample':index, 'time':timestamp})
             with Image.open(frame) as image:
                 findings.extend({**f, 'sample':index, 'time':timestamp} for f in sparkle_candidates(image)+youtube_candidates(image))
+        reviewed=fixed_regions(digest,1080,frame_height)
+        reason=exclusion_reason(findings,1080,frame_height) if not reviewed else None
+        if reason:
+            report.parent.mkdir(parents=True,exist_ok=True)
+            report.write_text(json.dumps({'status':'excluded','reason':reason,'findings':findings,'source_sha256':digest},indent=2))
+            return False
         regions = stable_regions([f for f in findings if f['kind']!='creator_text'],1080,frame_height)
         regions += timed_text_regions(findings,1080,frame_height,step,duration)
+        if reviewed:
+            regions=reviewed
         budget_exceeded = any(
             sum(r['box'][2]*r['box'][3] for r in regions
                 if 'start' not in r or r['start'] <= step*(i+.5) < r['end'])

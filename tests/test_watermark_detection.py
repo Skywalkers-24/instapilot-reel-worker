@@ -3,8 +3,9 @@ from pathlib import Path
 import unittest
 from PIL import Image, ImageDraw
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from watermark_detection import text_candidate, sparkle_candidates, stable_regions, timed_text_regions, youtube_candidates
+from watermark_detection import text_candidate, sparkle_candidates, stable_regions, timed_text_regions, youtube_candidates, exclusion_reason
 from brand_overlay import create_brand_overlay
+from source_exclusions import exclusions, fixed_regions
 
 
 def row(text, x=20, y=20, w=150, h=25, confidence=95):
@@ -63,6 +64,28 @@ class DetectionTests(unittest.TestCase):
         self.assertFalse(youtube_candidates(image))
         draw.polygon([(48,30),(48,60),(75,45)],fill='white')
         self.assertEqual(len(youtube_candidates(image)),1)
+
+    def test_reviewed_fixed_logo_sources_are_not_excluded(self):
+        profiles={
+            'b6c5083b7408a99370fdeb6b416b0dedc13e6c73e926d12e67c147e9c8becdcc',
+            'aad8d3d9eab0f6b4f8e30a3a25dd346a7e0c7abb13eaa2e5ccce063088665ff1',
+            '9f6357ad4bd3a1de321b975ca47e8f3a6dc45d36d8ab058720d7e6c0a5f91733'}
+        for digest in profiles:
+            self.assertNotIn(digest,exclusions())
+            regions=fixed_regions(digest,1080,1920)
+            self.assertEqual(len(regions),1)
+            x,y,w,h=regions[0]['box']
+            self.assertLess(w*h,1080*1920*.025)
+            self.assertTrue(x>0 and y>0 and x+w<1080 and y+h<1920)
+        self.assertEqual({p['review_number'] for p in exclusions().values()},{1,13})
+
+    def test_motion_skips_source_but_fixed_handle_does_not(self):
+        track=[{'kind':'creator_text','text':'@someone','box':[50+i*180,200,120,30],
+                'sample':i,'time':i+.5} for i in range(4)]
+        self.assertEqual(exclusion_reason(track,1080,1920),'Moving or switching creator watermark')
+        for finding in track:
+            finding['box']=[50,200,120,30]
+        self.assertIsNone(exclusion_reason(track,1080,1920))
 
     def test_stationary_mark_gets_one_small_region(self):
         findings=[{'kind':'gemini_sparkle','box':[860+i%2,1700,70,70],'sample':i} for i in range(8)]

@@ -8,6 +8,11 @@ def text_candidate(row, width, height):
     text = (row.get('text') or '').strip()
     if float(row.get('conf', -1)) < 70:
         return None
+    x, y, w, h = (int(row[k]) for k in ('left', 'top', 'width', 'height'))
+    if re.fullmatch(r'[._]*itzzgoru[._]*',text,re.I) and y>height*.75 and w*h<width*height*.015:
+        return {'kind':'creator_text','text':text,'box':[x,y,w,h]}
+    if text.upper()=='AF' and x<width*.15 and y<height*.15 and w*h<width*height*.003:
+        return {'kind':'creator_text','text':'AF','box':[x,y,w,h]}
     # Platform names in normal captions are not sufficient evidence.
     if not re.search(r'@[a-z0-9_.]{3,}|www\.|\b[a-z0-9_-]+\.(?:com|in|net|co|io)\b', text, re.I):
         return None
@@ -116,3 +121,19 @@ def timed_text_regions(findings,width,height,step,duration,min_samples=3):
         if sum(r['box'][2]*r['box'][3] for r in regions if r['start']<=time<r['end'])>width*height*.04:
             return []
     return regions
+
+
+def exclusion_reason(findings,width,height):
+    """Skip recognized moving branding rather than chasing it with masks."""
+    tracks={}
+    for finding in findings:
+        text=finding.get('text','').strip().lower()
+        if finding['kind']=='creator_text':
+            tracks.setdefault(text,[]).append(finding)
+    for text,track in tracks.items():
+        if len({f['sample'] for f in track})<3:continue
+        xs=[f['box'][0]+f['box'][2]/2 for f in track]
+        ys=[f['box'][1]+f['box'][3]/2 for f in track]
+        if max(xs)-min(xs)>width*.06 or max(ys)-min(ys)>height*.04:
+            return 'Moving or switching creator watermark'
+    return None

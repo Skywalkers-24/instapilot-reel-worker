@@ -102,3 +102,22 @@ A compact YouTube badge detector requires both a red badge and white triangular
 play glyph; arbitrary red rectangles are rejected. Unknown logo shapes are not
 automatically erased. A synthetic eight-second moving-handle render verified
 that timed blends leave the main caption readable. Ten unit tests passed.
+
+## Review corrections: fixed marks versus moving marks
+
+`data/source_exclusions.json` blocks reviewed moving-logo sources by original
+SHA256 (review slots 01 and 13). Both selection and direct processing enforce
+this before rendering or reserving. Newly detected text identities moving more
+than 6% of image width or 4% of height across three distinct samples are skipped.
+
+`data/source_watermark_profiles.json` provides bounded, source-specific blend
+coordinates for fixed marks in review slots 03/04 (itzzgoru) and 18 (AF). These
+sources remain eligible. Coordinates are scaled from the reference dimensions
+to the analysis frame; they are never applied to unrelated source hashes. This
+avoids depending on OCR for faint or stylized lettering. Generic OCR also
+recognizes the reviewed itzzgoru and top-left AF patterns when readable.
+
+The original review pack remains available; revised outputs replace processed
+slots 03, 04 and 18, with prior versions retained in previous-pass/. Slots 01
+and 13 remain viewable for comparison but are flagged excluded in the manifest.
+Twelve unit tests cover exclusions, profiles, motion policy and previous regressions.

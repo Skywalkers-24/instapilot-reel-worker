@@ -8,6 +8,7 @@ import tempfile
 import zipfile
 from process_bundle_clip import process
 from bundle_backend import call
+from source_exclusions import exclusions
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -22,6 +23,7 @@ def main():
     if not args.backend_ledger and not args.history:
         parser.error('--backend-ledger or --history is required')
     history = set(call('history')['hashes'] if args.backend_ledger else json.loads(args.history.read_text()))
+    history.update(exclusions())
     manifest = json.loads((ROOT / 'data/bundle_manifest.json').read_text())
     sources = ROOT / 'bundles'
     sources.mkdir(exist_ok=True)
