@@ -25,7 +25,7 @@ def probe(path):
                            '-of', 'json', str(path)]))
 
 
-def process(source, output, report, max_seconds=30):
+def process(source, output, report, max_seconds=None):
     digest=source_digest(source)
     blocked=exclusions().get(digest)
     if blocked:
@@ -37,7 +37,8 @@ def process(source, output, report, max_seconds=30):
             raise RuntimeError(f'Required tool missing: {tool}')
     info = probe(source)
     next(s for s in info['streams'] if s['codec_type'] == 'video')
-    duration = min(float(info['format']['duration']), max_seconds)
+    raw_duration = float(info['format']['duration'])
+    duration = min(raw_duration, max_seconds) if max_seconds else raw_duration
     if duration <= 5:
         raise ValueError('Video must be longer than five seconds')
     findings = []

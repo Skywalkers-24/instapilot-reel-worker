@@ -16,7 +16,7 @@ unused source only when eligible. Bulk preparation was cancelled by the user.
    reviewed exclusions, and considers at most 30 duration-valid candidates.
 5. The worker scans the rendered portion (up to 60 samples), skips moving or
    ambiguous marks, blends bounded stationary marks, preserves captions/audio,
-   fits to 1080x1920, caps at 30 seconds, and adds the white single-line wordmark.
+   fits to 1080x1920, preserves full clip duration, and adds the white single-line wordmark.
 6. It uploads one processed artifact to a `bundle-media-v1-*` release. It never
    replaces existing assets. Backend `/register` checks the media URL and bounds,
    locks the slot gate, creates a permanent unique source claim, and associates
