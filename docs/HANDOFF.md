@@ -60,12 +60,10 @@ deployment commit `df154c7` is live on the production alias.
 
 Worker branch commit `4852781` configures Cloudflare for those four times
 (07:30, 12:30, 14:30 and 16:30 UTC), while preserving the job scrape schedule.
-That Cloudflare schedule has not yet been deployed: `wrangler whoami` reports
-the local CLI is unauthenticated. Until an authorized Cloudflare session deploys
-the Worker, the previous every-30-minute wake schedule remains active; the live
-backend still skips all work outside its four allowed hours. Run `npx wrangler
-deploy` from `instapilot-reel-worker/` after authenticating with `wrangler login`.
-Activation is reversible by setting `content_mode=jobs`; preserve all ledger rows.
+The schedule is deployed to the live Worker and its health page reports the four
+publishing times plus the two existing job-scrape times. Cloudflare version
+`5d483cfc-87e1-4c2a-a498-e4db2939c026` is active. Activation is reversible by
+setting `content_mode=jobs`; preserve all ledger rows.
 
 ## Explicit logo-update repost
 
