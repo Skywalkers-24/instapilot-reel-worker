@@ -8,10 +8,11 @@ unused source only when eligible. Bulk preparation was cancelled by the user.
 1. Existing Cloudflare/cron wakeups call backend `/api/cron/trigger-publish`.
 2. In `content_mode=bundle`, the backend dispatches `publish-reel.yml` on
    `feature/trendyapa-bundle-reels`. In jobs mode, existing dispatch is preserved.
-3. Actions obtains short-lived GitHub OIDC identity and calls
-   `/api/bundle-worker/publish/next`. Backend enforces 18:00, 20:00 and 22:00 IST
-   hourly windows, one claim per slot, at most three account posts per day,
-   and the persisted cadence gate (50-minute default).
+3. Cloudflare wakes the pipeline at 13:00, 18:00, 20:00 and 22:00 IST. Actions
+   obtains short-lived GitHub OIDC identity and calls
+   `/api/bundle-worker/publish/next`. Backend enforces those four slots, one
+   claim per slot, at most four account posts per IST day, and the persisted
+   cadence gate (50-minute default).
 4. The selector downloads verified ZIP release assets, skips ledger hashes and
    reviewed exclusions, and considers at most 30 duration-valid candidates.
 5. The worker scans the rendered portion (up to 60 samples), skips moving or

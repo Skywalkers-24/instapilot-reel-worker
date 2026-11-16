@@ -1,12 +1,6 @@
 name: Process and Publish Bundle Reel
 on:
   workflow_dispatch:
-    inputs:
-      force_publish:
-        description: "Bypass backend cadence gate for manual testing"
-        required: false
-        default: false
-        type: boolean
 permissions:
   contents: write
   id-token: write
@@ -63,7 +57,6 @@ jobs:
           OMP_THREAD_LIMIT: '1'
           REEL_FFMPEG_THREADS: '2'
           REEL_RENDER_PRESET: veryfast
-          FORCE_PUBLISH: ${{ inputs.force_publish || 'false' }}
         run: python scripts/run_bundle.py
       - name: Check for processing reports
         if: always()

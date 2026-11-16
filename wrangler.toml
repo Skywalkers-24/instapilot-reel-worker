@@ -3,10 +3,11 @@ main = "src/index.js"
 compatibility_date = "2026-08-28"
 
 [triggers]
-# 1. Reel Publish: Fires every 30 minutes ("*/30 * * * *")
-# 2. Job Scraping: 6:00 AM IST (00:30 UTC) & 4:00 PM IST (10:30 UTC)
+# Reel publish: 1:00 PM, 6:00 PM, 8:00 PM and 10:00 PM IST
+# (07:30, 12:30, 14:30 and 16:30 UTC).
+# Job scraping remains at 6:00 AM and 4:00 PM IST (00:30 and 10:30 UTC).
 crons = [
-  "*/30 * * * *",
+  "30 7,12,14,16 * * *",
   "30 0,10 * * *"
 ]
 
