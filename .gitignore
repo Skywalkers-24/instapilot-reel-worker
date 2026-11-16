@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .env
+.wrangler/
 /temp/
 /tmp/
 /scratch/
