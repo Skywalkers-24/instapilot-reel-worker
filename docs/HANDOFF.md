@@ -51,12 +51,21 @@ credentials. The public worker receives no Meta, database or admin credentials.
 Existing shared CRON_SECRET in legacy orchestration remains architecture drift;
 the new worker contract uses OIDC.
 
-## Remaining production step
+## Current production schedule
 
-Deploy backend branch, verify routes, then enable content_mode=bundle via the
-admin settings API. Confirm existing external triggers reach the backend.
-Activation is reversible via content_mode=jobs. No production setting was changed
-while finalizing this code, and no scheduled reel was posted by finalization tests.
+Backend production is on the feature code and `content_mode=bundle` is active.
+The bundle gate allows 13:00, 18:00, 20:00 and 22:00 IST, with a maximum of
+four published reels per IST date and no workflow force bypass. Backend
+deployment commit `df154c7` is live on the production alias.
+
+Worker branch commit `4852781` configures Cloudflare for those four times
+(07:30, 12:30, 14:30 and 16:30 UTC), while preserving the job scrape schedule.
+That Cloudflare schedule has not yet been deployed: `wrangler whoami` reports
+the local CLI is unauthenticated. Until an authorized Cloudflare session deploys
+the Worker, the previous every-30-minute wake schedule remains active; the live
+backend still skips all work outside its four allowed hours. Run `npx wrangler
+deploy` from `instapilot-reel-worker/` after authenticating with `wrangler login`.
+Activation is reversible by setting `content_mode=jobs`; preserve all ledger rows.
 
 ## Explicit logo-update repost
 
